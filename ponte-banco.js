@@ -62,11 +62,15 @@ function abrirEntrar(){
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
     <h2 style="margin:0 0 6px;font-size:19px">Entrar na sua instituição</h2>
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Use o e-mail com que você foi
-      cadastrado na equipe. Enviamos um código de 6 dígitos — sem senha.</p>
+      cadastrado na equipe. Se já tem senha, entre direto; se não, deixe o campo de senha em
+      branco e mandamos um código de 6 dígitos.</p>
     <div id="ent-p1">
       <input id="ent-email" type="email" placeholder="seu@email.com" autocomplete="email"
         style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px">
-      <button onclick="enviarCodigo()" class="bt" style="width:100%;margin-top:12px">Receber meu código</button>
+      <input id="ent-senha" type="password" placeholder="Senha — deixe em branco se não tiver"
+        autocomplete="current-password"
+        style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin-top:8px">
+      <button onclick="entrarComSenha()" class="bt" style="width:100%;margin-top:12px">Entrar</button>
     </div>
     <div id="ent-p2" style="display:none">
       <input id="ent-cod" inputmode="numeric" placeholder="Código de 6 dígitos"
@@ -81,6 +85,21 @@ function abrirEntrar(){
   setTimeout(() => { const e = document.getElementById('ent-email'); if(e) e.focus(); }, 60);
 }
 function fecharEntrar(){ const o = document.getElementById('entrar-ov'); if(o) o.remove(); }
+/* botão único: com senha preenchida tenta login por senha; em branco, manda
+   o código por e-mail — mesmo comportamento de sempre pra quem nunca definiu
+   senha, então ninguém que já usava o código perde o próprio fluxo. */
+async function entrarComSenha(){
+  const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
+  const senha = document.getElementById('ent-senha').value || '';
+  const msg = document.getElementById('ent-msg');
+  if(!email.includes('@')){ msg.textContent = 'Confira o e-mail.'; return; }
+  if(!senha) return enviarCodigo();
+  msg.textContent = 'Entrando…';
+  const { error } = await sbc.auth.signInWithPassword({ email, password: senha });
+  if(error){ msg.textContent = 'E-mail ou senha não conferem. Se esqueceu a senha, deixe o campo em branco e entre por código.'; return; }
+  fecharEntrar();
+  conectar();
+}
 async function enviarCodigo(){
   const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
   const msg = document.getElementById('ent-msg');
@@ -102,13 +121,48 @@ async function confirmarCodigo(){
   const { error } = await sbc.auth.verifyOtp({ email: emailPendente, token: cod, type: 'email' });
   if(error){ msg.textContent = 'Código não confere ou venceu. Peça outro.'; return; }
   fecharEntrar();
-  conectar();
+  conectar(true);
+}
+
+/* ============================================================
+   DEFINIR SENHA — oferecido uma vez, logo após entrar por código, pra quem
+   ainda não tem senha. Sem 2FA: é só entrar mais rápido da próxima vez.
+   Nunca é obrigatório e nunca aparece de novo na mesma sessão se fechado.
+   ============================================================ */
+let ofereceuSenha = false;
+function oferecerDefinirSenha(){
+  if(ofereceuSenha) return; ofereceuSenha = true;
+  const o = document.createElement('div'); o.id = 'senha-ov';
+  o.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9998;'
+    + 'background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.25);'
+    + 'max-width:360px;width:92vw';
+  o.innerHTML = `<b style="font-size:14px">Quer entrar mais rápido da próxima vez?</b>
+    <p style="margin:6px 0 10px;color:#6b625a;font-size:13px">Defina uma senha agora — sem senha
+      decorada, também dá pra continuar entrando por código sempre.</p>
+    <input id="ds-senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)"
+      style="width:100%;padding:9px 11px;border:1.5px solid #d8d0c6;border-radius:9px;font-size:14px;box-sizing:border-box">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="confirmarDefinirSenha()" class="bt" style="flex:1">Definir senha</button>
+      <button onclick="document.getElementById('senha-ov').remove()"
+        style="background:none;border:none;color:#6b625a;font-size:13px;cursor:pointer">Agora não</button>
+    </div>
+    <div id="ds-msg" style="margin-top:8px;font-size:12.5px;color:#8f3907"></div>`;
+  document.body.appendChild(o);
+}
+async function confirmarDefinirSenha(){
+  const senha = document.getElementById('ds-senha').value || '';
+  const msg = document.getElementById('ds-msg');
+  if(senha.length < 6){ msg.textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
+  msg.textContent = 'Salvando…';
+  const { error } = await sbc.auth.updateUser({ password: senha });
+  if(error){ console.error('[banco] definir senha', error); msg.textContent = 'Não consegui salvar agora. Tente de novo depois.'; return; }
+  const o = document.getElementById('senha-ov'); if(o) o.remove();
 }
 
 /* ============================================================
    CONECTAR — vincula a conta à equipe e troca a fonte dos dados
    ============================================================ */
-async function conectar(){
+async function conectar(viaCodigo){
   const { data, error } = await sbc.rpc('vincular_meu_acesso');
   if(error){
     avisoDB('a conexão'); await sbc.auth.signOut(); return;
@@ -117,13 +171,13 @@ async function conectar(){
     /* e-mail novo, sem equipe em nenhuma instituição: antes disso era beco
        sem saída (alerta + logout). Agora oferece criar a instituição na
        hora — self-service, igual ao que o site já promete. */
-    mostrarCriarInstituicao();
+    mostrarCriarInstituicao(viaCodigo);
     return;
   }
-  await entrarComVinculo(data);
+  await entrarComVinculo(data, viaCodigo);
 }
 
-async function entrarComVinculo(data){
+async function entrarComVinculo(data, viaCodigo){
   CONEXAO.eu = data; CONEXAO.orgId = data.instituicao_id;
   try{
     await carregarTudo();
@@ -139,6 +193,9 @@ async function entrarComVinculo(data){
     b.onclick = trocarPapel;
   });
   identidade(); irMenu(inicioDoPapel());
+  // quem entrou por código (sem senha) ganha o convite pra definir uma — só
+  // uma vez por sessão, nunca obrigatório, login por código continua igual.
+  if(viaCodigo) setTimeout(oferecerDefinirSenha, 900);
 }
 
 /* ============================================================
@@ -148,6 +205,8 @@ async function entrarComVinculo(data){
    conta da sua instituição", app só sabia dizer "peça pra te adicionarem").
    ============================================================ */
 function mostrarCriarInstituicao(){
+  // hoje só se chega aqui vindo do fluxo por código (signInWithOtp cria a
+  // conta na hora) — por isso oferece definir senha ao final, sempre.
   fecharCriarInstituicao();
   const o = document.createElement('div'); o.id = 'criar-inst-ov';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
@@ -191,7 +250,7 @@ async function confirmarCriarInstituicao(){
     return;
   }
   fecharCriarInstituicao();
-  await entrarComVinculo(data);
+  await entrarComVinculo(data, true);
 }
 async function cancelarCriarInstituicao(){
   fecharCriarInstituicao();
