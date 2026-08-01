@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>360social — gestão de atendimento e impacto social</title>
+<meta name="description" content="Plataforma brasileira para instituições de assistência social: identificar, atender, registrar e acompanhar. Prontuário em linha do tempo, presença em tempo real, doações, relatórios e mural de impacto.">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="marca/icone-laranja.svg">
+<link rel="apple-touch-icon" href="marca/png/icone-laranja-512.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="360social">
+<meta property="og:title" content="360social — gestão de atendimento e impacto social">
+<meta property="og:description" content="Cada pessoa tem uma história. A gente organiza o que a instituição faz por ela.">
+<meta property="og:url" content="https://360social.com.br/">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:image" content="https://360social.com.br/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://360social.com.br/og.png">
+<link rel="canonical" href="https://360social.com.br/">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication",
+"name":"360social","applicationCategory":"BusinessApplication",
+"operatingSystem":"Web","inLanguage":"pt-BR",
+"description":"Plataforma de gestão de atendimento e impacto social para instituições brasileiras.",
+"url":"https://360social.com.br/",
+"publisher":{"@type":"Organization","name":"Arbor Labs","url":"https://arborlabs.com.br/"}}
+</script>
+
+<style>
+/* ============================================================
+   360social — página de apresentação
+   Mesma régua do produto: linhas suaves, texto antes de ícone,
+   laranja só em ação. O celular manda.
+   ============================================================ */
+:root{
+  --lar:#F26A1B; --lar-esc:#C2500C; --lar-fun:#FFF5EE; --lar-fun2:#FFEBDC; --lar-bd:#F8D4B6;
+  --b0:#FFFFFF; --b1:#FAFAFB; --b2:#F4F5F7; --b3:#EDEEF1;
+  --ln:#E9EBEF; --ln2:#F1F2F5; --ln3:#DDE0E6;
+  --tx:#1A1C20; --tx2:#43474F; --tx3:#6E737D; --tx4:#9AA0AA;
+  --ok:#12805C; --ok-fun:#EAF6F1; --ok-bd:#BFE3D4;
+  --av:#9A6400; --av-fun:#FFF8EA; --av-bd:#EEDCB4;
+  --az:#2B5CC4; --az-fun:#EFF3FC; --az-bd:#C7D6F2;
+  --rx:#5B44C8; --rx-fun:#F3F0FD; --rx-bd:#D3C9F3;
+  --esc:#15171B; --esc2:#1F2229;
+  --r:10px; --r2:14px; --r3:20px; --r4:28px;
+  --sh:0 1px 2px rgba(26,28,32,.04);
+  --sh2:0 4px 16px rgba(26,28,32,.07);
+  --sh3:0 14px 40px rgba(26,28,32,.10);
+  --sh4:0 30px 70px rgba(26,28,32,.14);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --lim:1140px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  background:var(--b0);color:var(--tx);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--lar-fun2)}
+.lim{max-width:var(--lim);margin:0 auto;padding:0 24px}
+@media(max-width:640px){ .lim{padding:0 18px} }
+
+/* ---------- topo ---------- */
+.topo{position:sticky;top:0;z-index:80;background:rgba(255,255,255,.86);
+  backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);
+  border-bottom:1px solid transparent;transition:border-color .2s, box-shadow .2s}
+.topo.desce{border-bottom-color:var(--ln);box-shadow:0 1px 0 rgba(26,28,32,.02)}
+.topo .in{display:flex;align-items:center;gap:26px;height:66px}
+.topo .marca{display:flex;align-items:center;gap:10px;flex:none}
+.topo .marca svg{width:26px;height:26px}
+.topo .marca b{font-size:18px;font-weight:800;letter-spacing:-.025em}
+.topo .marca b i{font-style:normal;font-weight:500;color:var(--tx3)}
+.topo nav{display:flex;gap:4px;margin-left:8px}
+.topo nav a{font-size:14.5px;font-weight:600;color:var(--tx2);padding:8px 12px;border-radius:8px;transition:.14s}
+.topo nav a:hover{background:var(--b2);color:var(--tx)}
+.topo .sp{flex:1}
+.bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;
+  font-weight:700;letter-spacing:-.01em;border-radius:var(--r);transition:.16s;font-size:15px;
+  padding:11px 20px;line-height:1.2;white-space:nowrap}
+.bt.pri{background:var(--lar);color:#fff;box-shadow:0 1px 2px rgba(194,80,12,.28)}
+.bt.pri:hover{background:var(--lar-esc);transform:translateY(-1px);box-shadow:0 6px 18px rgba(194,80,12,.26)}
+.bt.sec{background:var(--b0);color:var(--tx);border:1px solid var(--ln3)}
+.bt.sec:hover{background:var(--b2);border-color:var(--tx4)}
+.bt.fan{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.24)}
+.bt.fan:hover{background:rgba(255,255,255,.18)}
+.bt.gr{padding:14px 26px;font-size:16.5px}
+@media(max-width:880px){ .topo nav{display:none} .topo .in{height:60px;gap:14px} }
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:74px 0 8px;overflow:hidden}
+.hero:before{content:"";position:absolute;inset:-200px 0 auto -10%;height:620px;
+  background:radial-gradient(60% 70% at 22% 40%, rgba(242,106,27,.10), transparent 70%);
+  pointer-events:none}
+.hero .selo{display:inline-flex;align-items:center;gap:9px;background:var(--lar-fun);
+  border:1px solid var(--lar-bd);color:var(--lar-esc);font-size:13px;font-weight:750;
+  padding:6px 14px 6px 8px;border-radius:30px;margin-bottom:26px}
+.hero .selo span{background:var(--lar);color:#fff;font-size:11px;font-weight:800;
+  padding:2px 8px;border-radius:20px;letter-spacing:.02em}
+.hero h1{font-size:clamp(34px,5.4vw,60px);line-height:1.06;letter-spacing:-.035em;font-weight:800;
+  max-width:15ch}
+.hero h1 em{font-style:normal;color:var(--lar)}
+.hero .sub{margin-top:22px;font-size:clamp(17px,2.1vw,20.5px);line-height:1.55;color:var(--tx2);
+  max-width:56ch;font-weight:450}
+.hero .acoes{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.hero .fina{margin-top:18px;font-size:13.5px;color:var(--tx4)}
+.hero .fig{margin-top:56px;position:relative}
+@media(max-width:640px){ .hero{padding-top:48px} .hero .acoes .bt{flex:1 1 100%} }
+
+/* mock de tela */
+.tela{background:var(--b0);border:1px solid var(--ln);border-radius:var(--r4);box-shadow:var(--sh4);
+  overflow:hidden}
+.tela .barra{display:flex;align-items:center;gap:7px;padding:13px 18px;border-bottom:1px solid var(--ln2);
+  background:var(--b1)}
+.tela .barra i{width:10px;height:10px;border-radius:50%;background:var(--ln3);display:block}
+.tela .barra .url{margin-left:12px;font-size:12px;color:var(--tx4);font-family:var(--mono)}
+.tela .corpo{display:flex;min-height:400px}
+.tela .lat{width:186px;flex:none;border-right:1px solid var(--ln);padding:16px 12px;background:var(--b0)}
+.tela .lat .org{background:var(--b2);border-radius:var(--r);padding:10px 11px;margin-bottom:14px}
+.tela .lat .org b{display:block;font-size:12px;font-weight:750;letter-spacing:-.01em}
+.tela .lat .org small{font-size:11px;color:var(--tx3)}
+.tela .lat u{display:block;text-decoration:none;font-size:13.5px;font-weight:650;color:var(--tx2);
+  padding:9px 11px;border-radius:var(--r);margin-bottom:2px}
+.tela .lat u.on{background:var(--lar-fun);color:var(--lar-esc);font-weight:750;
+  box-shadow:inset 2px 0 0 var(--lar)}
+.tela .pal{flex:1;padding:22px;background:var(--b1);min-width:0}
+.tela h4{font-size:19px;letter-spacing:-.02em;font-weight:780;margin-bottom:3px}
+.tela .dica{font-size:13px;color:var(--tx3);margin-bottom:18px}
+.cartas{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.carta{background:var(--b0);border:1px solid var(--ln);border-radius:var(--r2);padding:15px 16px}
+.carta .k{font-size:11.5px;font-weight:750;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em}
+.carta .v{font-size:29px;font-weight:800;letter-spacing:-.035em;margin-top:5px;line-height:1}
+.carta .p{font-size:12px;color:var(--tx4);margin-top:4px}
+.carta.viva{border-color:var(--ok-bd);background:var(--ok-fun)}
+.carta.viva .v{color:var(--ok)}
+.linhas{margin-top:14px;background:var(--b0);border:1px solid var(--ln);border-radius:var(--r2);overflow:hidden}
+.linhas .l{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--ln2);font-size:13.5px}
+.linhas .l:first-child{border-top:0}
+.linhas .l>span.av{width:30px;height:30px;border-radius:50%;background:var(--lar-fun2);color:var(--lar-esc);
+  display:grid;place-items:center;font-size:11.5px;font-weight:800;flex:none}
+.linhas .l>div{flex:1;min-width:0}
+.linhas .l b{font-weight:680;letter-spacing:-.01em}
+.linhas .l small{color:var(--tx3);font-size:12.5px}
+.linhas .l .tag{margin-left:auto;flex:none;font-size:11.5px;font-weight:750;padding:3px 9px;
+  border-radius:20px;background:var(--b2);color:var(--tx3);white-space:nowrap}
+.linhas .l .tag.ok{background:var(--ok-fun);color:var(--ok)}
+.linhas .l .tag.aten{background:var(--av-fun);color:var(--av)}
+@media(max-width:820px){ .tela .lat{display:none} .cartas{grid-template-columns:1fr 1fr} }
+@media(max-width:520px){ .cartas{grid-template-columns:1fr} .tela .corpo{min-height:0} }
+
+/* ---------- faixa de credibilidade ---------- */
+.faixa{margin-top:64px;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);
+  background:var(--b1)}
+.faixa .in{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--ln)}
+.faixa .it{background:var(--b1);padding:26px 22px}
+.faixa .it b{display:block;font-size:15px;font-weight:780;letter-spacing:-.015em;margin-bottom:5px}
+.faixa .it span{font-size:13.5px;color:var(--tx3);line-height:1.5}
+@media(max-width:860px){ .faixa .in{grid-template-columns:1fr 1fr} }
+@media(max-width:520px){ .faixa .in{grid-template-columns:1fr} }
+
+/* ---------- seções ---------- */
+section{padding:86px 0}
+.tit{max-width:62ch}
+.tit .olho{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--lar);margin-bottom:14px}
+.tit h2{font-size:clamp(27px,3.6vw,40px);line-height:1.12;letter-spacing:-.032em;font-weight:800}
+.tit h2 em{font-style:normal;color:var(--lar)}
+.tit p{margin-top:16px;font-size:17.5px;line-height:1.6;color:var(--tx2)}
+@media(max-width:640px){ section{padding:62px 0} }
+
+/* distinção pessoa x atendimento */
+.conta{margin-top:44px;display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:stretch}
+.conta .cx{background:var(--b1);border:1px solid var(--ln);border-radius:var(--r3);padding:30px 28px}
+.conta .cx .n{font-size:56px;font-weight:800;letter-spacing:-.05em;line-height:1;color:var(--lar)}
+.conta .cx .r{font-size:15px;font-weight:750;margin-top:8px;letter-spacing:-.01em}
+.conta .cx .d{font-size:14px;color:var(--tx3);margin-top:8px;line-height:1.55}
+.conta .meio{display:grid;place-items:center;font-size:30px;color:var(--tx4);font-weight:300;padding:0 4px}
+.conta .cx.forte{background:var(--lar-fun);border-color:var(--lar-bd)}
+.nota-forte{margin-top:26px;padding:20px 24px;border-left:3px solid var(--lar);background:var(--b1);
+  border-radius:0 var(--r2) var(--r2) 0;font-size:16px;color:var(--tx2);line-height:1.6}
+.nota-forte b{color:var(--tx);font-weight:750}
+@media(max-width:760px){ .conta{grid-template-columns:1fr} .conta .meio{padding:2px 0;font-size:22px} }
+
+/* ciclo */
+.ciclo{margin-top:44px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;counter-reset:c}
+.ciclo .et{position:relative;background:var(--b0);border:1px solid var(--ln);border-radius:var(--r2);
+  padding:24px 22px 22px;transition:.18s}
+.ciclo .et:hover{border-color:var(--lar-bd);box-shadow:var(--sh2);transform:translateY(-2px)}
+.ciclo .et:before{counter-increment:c;content:counter(c);display:grid;place-items:center;
+  width:28px;height:28px;border-radius:8px;background:var(--lar-fun);color:var(--lar-esc);
+  font-size:13px;font-weight:800;margin-bottom:14px}
+.ciclo .et b{display:block;font-size:16.5px;font-weight:780;letter-spacing:-.02em;margin-bottom:7px}
+.ciclo .et span{font-size:14px;color:var(--tx3);line-height:1.55}
+@media(max-width:900px){ .ciclo{grid-template-columns:1fr 1fr} }
+@media(max-width:520px){ .ciclo{grid-template-columns:1fr} }
+
+/* módulos */
+.mods{margin-top:46px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--ln);
+  border:1px solid var(--ln);border-radius:var(--r3);overflow:hidden}
+.mod{background:var(--b0);padding:30px 28px;transition:.18s}
+.mod:hover{background:var(--b1)}
+.mod .cab{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.mod .cab .pt{width:8px;height:8px;border-radius:50%;background:var(--lar);flex:none}
+.mod h3{font-size:17.5px;font-weight:780;letter-spacing:-.022em}
+.mod p{font-size:14.5px;color:var(--tx2);line-height:1.6}
+.mod ul{margin-top:14px;list-style:none}
+.mod ul li{font-size:13.5px;color:var(--tx3);padding-left:16px;position:relative;margin-top:6px;line-height:1.5}
+.mod ul li:before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;
+  background:var(--ln3)}
+@media(max-width:940px){ .mods{grid-template-columns:1fr 1fr} }
+@media(max-width:600px){ .mods{grid-template-columns:1fr} }
+
+/* seção escura — o lugar */
+.escuro{background:var(--esc);color:#fff;position:relative;overflow:hidden}
+.escuro:before{content:"";position:absolute;top:-30%;right:-10%;width:70%;height:140%;
+  background:radial-gradient(50% 50% at 60% 40%, rgba(242,106,27,.20), transparent 70%);pointer-events:none}
+.escuro .tit h2{color:#fff}
+.escuro .tit p{color:rgba(255,255,255,.66)}
+.escuro .tit .olho{color:var(--lar)}
+.duplo{margin-top:46px;display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;
+  position:relative}
+.escuro .lista{list-style:none}
+.escuro .lista li{padding:16px 0;border-top:1px solid rgba(255,255,255,.10)}
+.escuro .lista li:first-child{border-top:0;padding-top:0}
+.escuro .lista li b{display:block;font-size:16px;font-weight:750;letter-spacing:-.015em;margin-bottom:5px}
+.escuro .lista li span{font-size:14.5px;color:rgba(255,255,255,.6);line-height:1.6}
+.painel{background:var(--esc2);border:1px solid rgba(255,255,255,.11);border-radius:var(--r3);
+  padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.painel .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.painel .top b{font-size:15.5px;font-weight:750;letter-spacing:-.015em}
+.painel .top small{font-size:12px;color:rgba(255,255,255,.42);font-family:var(--mono)}
+.painel .big{margin-top:20px;display:flex;align-items:baseline;gap:12px}
+.painel .big .n{font-size:74px;font-weight:800;letter-spacing:-.055em;line-height:.9;color:var(--lar)}
+.painel .big .l{font-size:14px;color:rgba(255,255,255,.55);line-height:1.35}
+.painel .cap{margin-top:20px}
+.painel .cap .tr{height:8px;border-radius:20px;background:rgba(255,255,255,.10);overflow:hidden}
+.painel .cap .tr i{display:block;height:100%;width:0;border-radius:20px;
+  background:linear-gradient(90deg,var(--lar),#FF9552);transition:width 1.6s cubic-bezier(.2,.7,.2,1)}
+.painel .cap .lg{display:flex;justify-content:space-between;font-size:12px;
+  color:rgba(255,255,255,.45);margin-top:8px}
+.painel .alerta{margin-top:22px;background:rgba(242,106,27,.13);border:1px solid rgba(242,106,27,.34);
+  border-radius:var(--r2);padding:15px 17px}
+.painel .alerta b{display:block;font-size:14px;font-weight:750;color:#FFC79B;margin-bottom:4px}
+.painel .alerta span{font-size:13.5px;color:rgba(255,255,255,.62);line-height:1.5}
+@media(max-width:880px){ .duplo{grid-template-columns:1fr;gap:34px} .painel .big .n{font-size:60px} }
+
+/* bloco inspirador */
+.inspira{display:grid;grid-template-columns:.92fr 1.08fr;gap:52px;align-items:center}
+.inspira .arte{background:linear-gradient(150deg,#FFF9F4,#FFEEE1);border:1px solid var(--lar-bd);
+  border-radius:var(--r4);padding:22px;overflow:hidden}
+.inspira .arte svg{width:100%;height:auto;display:block}
+.inspira .txt h2{font-size:clamp(27px,3.4vw,38px);line-height:1.13;letter-spacing:-.032em;
+  font-weight:800;margin-bottom:18px}
+.inspira .txt h2 em{font-style:normal;color:var(--lar)}
+.inspira .txt .olho{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--lar);margin-bottom:14px}
+.inspira .txt p{font-size:16.5px;line-height:1.68;color:var(--tx2);margin-bottom:15px}
+.inspira .txt p b{color:var(--tx);font-weight:750}
+.inspira .txt .frase{margin-top:20px;margin-bottom:0;padding-left:18px;
+  border-left:3px solid var(--lar);font-size:17px;color:var(--tx);font-weight:520;line-height:1.6}
+@media(max-width:880px){ .inspira{grid-template-columns:1fr;gap:32px} }
+
+/* resumo semanal para investidores */
+.semanal{background:linear-gradient(155deg,#FFFDFB,#FFF4EA);border:1px solid var(--lar-bd);
+  border-radius:var(--r4);padding:46px;display:grid;grid-template-columns:1.05fr .95fr;
+  gap:46px;align-items:center;margin-top:44px}
+.semanal h3{font-size:clamp(24px,3vw,33px);line-height:1.15;letter-spacing:-.03em;font-weight:800}
+.semanal h3 em{font-style:normal;color:var(--lar)}
+.semanal p{margin-top:15px;font-size:16px;line-height:1.65;color:var(--tx2)}
+.semanal ul{list-style:none;margin-top:18px}
+.semanal ul li{font-size:15px;color:var(--tx2);padding-left:24px;position:relative;margin-top:10px;
+  line-height:1.55}
+.semanal ul li:before{content:"";position:absolute;left:0;top:6px;width:13px;height:8px;
+  border-left:2.5px solid var(--lar);border-bottom:2.5px solid var(--lar);transform:rotate(-45deg)}
+.carta-mail{background:#fff;border:1px solid var(--ln);border-radius:var(--r3);box-shadow:var(--sh3);
+  overflow:hidden}
+.carta-mail .cab2{padding:15px 20px;border-bottom:1px solid var(--ln2);background:var(--b1)}
+.carta-mail .cab2 .de{font-size:12px;color:var(--tx4);font-weight:650}
+.carta-mail .cab2 .as{font-size:15px;font-weight:780;letter-spacing:-.02em;margin-top:3px}
+.carta-mail .mio{padding:20px}
+.carta-mail .mio .ola{font-size:13.5px;color:var(--tx2);line-height:1.55;margin-bottom:16px}
+.carta-mail .nums{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.carta-mail .nums div{background:var(--b1);border:1px solid var(--ln2);border-radius:var(--r);
+  padding:12px 13px}
+.carta-mail .nums b{display:block;font-size:24px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.carta-mail .nums span{display:block;font-size:11.5px;color:var(--tx3);margin-top:4px;font-weight:650}
+.carta-mail .barrinhas{margin-top:14px;display:flex;align-items:flex-end;gap:5px;height:56px}
+.carta-mail .barrinhas i{flex:1;background:linear-gradient(180deg,#FF9552,var(--lar));border-radius:3px}
+.carta-mail .pe3{padding:12px 20px;border-top:1px solid var(--ln2);font-size:11.5px;color:var(--tx4)}
+@media(max-width:880px){ .semanal{grid-template-columns:1fr;gap:32px;padding:32px 24px} }
+
+/* planos */
+.planos{margin-top:46px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+.plano{border:1px solid var(--ln);border-radius:var(--r3);padding:30px 28px;background:var(--b0);
+  display:flex;flex-direction:column;transition:.18s}
+.plano:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.plano.destacado{border:2px solid var(--lar);box-shadow:var(--sh3);position:relative}
+.plano.destacado:before{content:"MAIS ESCOLHIDO";position:absolute;top:-11px;left:28px;
+  background:var(--lar);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+  padding:4px 11px;border-radius:20px}
+.plano .nm{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.plano .pr{margin-top:14px;display:flex;align-items:baseline;gap:5px}
+.plano .pr .v{font-size:40px;font-weight:800;letter-spacing:-.045em;line-height:1}
+.plano .pr .u{font-size:14px;color:var(--tx3);font-weight:650}
+.plano .de{font-size:13.5px;color:var(--tx3);margin-top:9px;line-height:1.5;min-height:42px}
+.plano ul{list-style:none;margin:20px 0 24px}
+.plano ul li{font-size:14.5px;color:var(--tx2);padding-left:24px;position:relative;margin-top:11px;
+  line-height:1.5}
+.plano ul li:before{content:"";position:absolute;left:0;top:5px;width:13px;height:8px;
+  border-left:2.5px solid var(--lar);border-bottom:2.5px solid var(--lar);transform:rotate(-45deg)}
+.plano ul li b{color:var(--tx);font-weight:750}
+.plano .bt{margin-top:auto;width:100%}
+@media(max-width:900px){ .planos{grid-template-columns:1fr} }
+
+/* papéis */
+.papeis{margin-top:44px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.papel{border:1px solid var(--ln);border-radius:var(--r2);padding:24px 22px;background:var(--b0)}
+.papel .q{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--lar);
+  margin-bottom:10px}
+.papel b{display:block;font-size:16px;font-weight:780;letter-spacing:-.02em;margin-bottom:7px}
+.papel span{font-size:14px;color:var(--tx3);line-height:1.55}
+@media(max-width:900px){ .papeis{grid-template-columns:1fr 1fr} }
+@media(max-width:520px){ .papeis{grid-template-columns:1fr} }
+
+/* lgpd */
+.seg{background:var(--b1);border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.regras{margin-top:42px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.regra{background:var(--b0);border:1px solid var(--ln);border-radius:var(--r2);padding:26px 24px}
+.regra b{display:block;font-size:16px;font-weight:780;letter-spacing:-.02em;margin-bottom:8px}
+.regra span{font-size:14.5px;color:var(--tx2);line-height:1.6}
+@media(max-width:900px){ .regras{grid-template-columns:1fr} }
+
+/* cta */
+.chamada{background:var(--esc);color:#fff;border-radius:var(--r4);padding:64px 56px;
+  position:relative;overflow:hidden;text-align:center}
+.chamada:before{content:"";position:absolute;inset:auto -20% -60% -20%;height:70%;
+  background:radial-gradient(50% 60% at 50% 50%, rgba(242,106,27,.26), transparent 70%)}
+.chamada .roda{width:min(230px,52vw);height:auto;margin:0 auto 26px;position:relative;display:block}
+.chamada h2{font-size:clamp(26px,3.4vw,38px);line-height:1.14;letter-spacing:-.032em;font-weight:800;
+  position:relative;max-width:20ch;margin:0 auto}
+.chamada p{margin:18px auto 0;font-size:17px;color:rgba(255,255,255,.66);max-width:52ch;
+  position:relative;line-height:1.6}
+.chamada .acoes{margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative}
+@media(max-width:640px){ .chamada{padding:44px 26px;border-radius:var(--r3)}
+  .chamada .acoes .bt{flex:1 1 100%} }
+
+/* rodapé */
+footer{padding:64px 0 40px;border-top:1px solid var(--ln);margin-top:24px}
+.rod{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:34px}
+.rod .sobre .marca{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.rod .sobre .marca svg{width:24px;height:24px}
+.rod .sobre .marca b{font-size:17px;font-weight:800;letter-spacing:-.025em}
+.rod .sobre .marca b i{font-style:normal;font-weight:500;color:var(--tx3)}
+.rod .sobre p{font-size:14px;color:var(--tx3);line-height:1.6;max-width:38ch}
+.rod .col b{display:block;font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--tx4);margin-bottom:14px}
+.rod .col a,.rod .col span{display:block;font-size:14.5px;color:var(--tx2);margin-bottom:9px;line-height:1.5}
+.rod .col .brasil{display:flex;align-items:center;gap:8px;margin-top:14px}
+.rod .col .brasil svg{flex:none;border-radius:2.5px}
+.rod .col a:hover{color:var(--lar)}
+.fim{margin-top:44px;padding-top:24px;border-top:1px solid var(--ln);display:flex;
+  justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--tx4)}
+.fim .arb{display:flex;align-items:center;gap:7px}
+.fim .arb b{color:var(--tx2);font-weight:700}
+@media(max-width:860px){ .rod{grid-template-columns:1fr 1fr} .rod .sobre{grid-column:1/-1} }
+@media(max-width:520px){ .rod{grid-template-columns:1fr} }
+
+/* aparecer */
+.ap{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.ap.viu{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){ .ap{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto} }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="s360" viewBox="-60 -60 120 120">
+  <path d="M13.46,-50.23 A52,52 0 0 1 50.23,13.46 L38.64,10.35 A40,40 0 0 0 10.35,-38.64 Z M36.77,36.77 A52,52 0 0 1 -36.77,36.77 L-28.28,28.28 A40,40 0 0 0 28.28,28.28 Z M-50.23,13.46 A52,52 0 0 1 -13.46,-50.23 L-10.35,-38.64 A40,40 0 0 0 -38.64,10.35 Z" fill="currentColor"/>
+  <circle cx="0" cy="0" r="16.64" fill="currentColor"/>
+</symbol>
+</defs></svg>
+
+<header class="topo" id="topo">
+  <div class="lim in">
+    <a class="marca" href="#" aria-label="360social — voltar ao início"
+       onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'})">
+      <svg style="color:var(--lar)"><use href="#s360"/></svg>
+      <b>360<i>social</i></b>
+    </a>
+    <nav>
+      <a href="#ciclo">Como funciona</a>
+      <a href="#modulos">Módulos</a>
+      <a href="#lugar">Presença</a>
+      <a href="#planos">Planos</a>
+    </nav>
+    <div class="sp"></div>
+    <a class="bt pri" href="#planos">Começar agora</a>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="lim">
+    <div class="selo"><span>NOVO</span> Feito no Brasil, para instituições brasileiras</div>
+    <h1>Cada pessoa tem uma <em>história</em>.</h1>
+    <p class="sub">O 360social organiza o que a sua instituição faz por ela — quem chegou, o que
+    recebeu, quem atendeu, o que ficou pendente e o que mudou desde a primeira vez. Do prato de
+    comida ao encaminhamento que resolveu o documento.</p>
+    <div class="acoes">
+      <a class="bt pri gr" href="#planos">Começar agora — 7 dias grátis</a>
+      <a class="bt sec gr" href="#ciclo">Ver como funciona</a>
+    </div>
+    <p class="fina">Assistência social, acolhimento, restaurante comunitário, ação de rua e projetos socioeducativos.</p>
+
+    <div class="fig ap">
+      <div class="tela">
+        <div class="barra"><i></i><i></i><i></i></div>
+        <div class="corpo">
+          <div class="lat">
+            <div class="org"><b>Projeto Social</b><small>Cidade Melhor</small></div>
+            <u class="on">Atender</u>
+            <u>Quem está aqui</u>
+            <u>Pessoas</u>
+            <u>Doações</u>
+          </div>
+          <div class="pal">
+            <h4>Bom dia, Marina</h4>
+            <p class="dica">Você é voluntária e este é o seu painel</p>
+            <p class="dica" style="margin-top:-12px">Terça-feira · Restaurante Comunitário · turno da manhã</p>
+            <div class="cartas">
+              <div class="carta viva"><div class="k">Aqui agora</div><div class="v">87</div><div class="p">de 120 lugares</div></div>
+              <div class="carta"><div class="k">Pessoas hoje</div><div class="v">142</div><div class="p">pessoas únicas</div></div>
+              <div class="carta"><div class="k">Atendimentos</div><div class="v">218</div><div class="p">serviços entregues</div></div>
+            </div>
+            <div class="linhas">
+              <div class="l"><span class="av">JC</span><div><b>João C. de Souza</b><br><small>Almoço · Banho</small></div><span class="tag ok">Abordado</span></div>
+              <div class="l"><span class="av">MR</span><div><b>Marta R. Pereira</b><br><small>Entrou às 09:14</small></div><span class="tag aten">Sem abordagem</span></div>
+              <div class="l"><span class="av">AL</span><div><b>Antônio L. Ramos</b><br><small>Almoço · Corte de cabelo · Contato com CRAS</small></div><span class="tag ok">Abordado</span></div>
+              <div class="l"><span class="av">SF</span><div><b>Sebastião F. Dias</b><br><small>Retorno agendado hoje</small></div><span class="tag">Pendência</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="faixa">
+  <div class="lim"><div class="in">
+    <div class="it"><b>Celular, tablet ou PC</b><span>Mobilidade, velocidade e praticidade de qualquer lugar, a qualquer momento.</span></div>
+    <div class="it"><b>Nada é excluído</b><span>Cancelado, arquivado, inativado, sempre com trilha de auditoria. Erro de operação não apaga história.</span></div>
+    <div class="it"><b>Cada instituição na sua casa</b><span>Sua organização enxerga só o que é dela. Seus dados não se misturam com os de ninguém.</span></div>
+    <div class="it"><b>Cada papel na sua tela</b><span>O registro de acompanhamento fica separado do atendimento do dia, e quem vê o quê é a instituição que define.</span></div>
+  </div></div>
+</div>
+
+<!-- ============ PESSOA x ATENDIMENTO ============ -->
+<section>
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">A conta que muda tudo</div>
+      <h2>Uma coisa é <em>quantas pessoas</em>. Outra é <em>quantos atendimentos</em>.</h2>
+      <p>É aqui que a maioria dos relatórios erra — e é aqui que a instituição perde credibilidade
+      com quem financia. O 360social separa as duas contas desde o primeiro registro.</p>
+    </div>
+
+    <div class="conta ap">
+      <div class="cx forte">
+        <div class="n">1</div>
+        <div class="r">pessoa única</div>
+        <div class="d">O João apareceu hoje. Ele é uma pessoa, com uma história que continua
+        na próxima vez que ele entrar pela porta.</div>
+      </div>
+      <div class="meio">×</div>
+      <div class="cx">
+        <div class="n">3</div>
+        <div class="r">atendimentos</div>
+        <div class="d">Ele almoçou, tomou banho e cortou o cabelo. São três serviços entregues,
+        três registros, três linhas no prontuário dele.</div>
+      </div>
+    </div>
+
+    <div class="nota-forte ap">Somar tudo como "3 pessoas atendidas" infla o próprio impacto e
+    derruba a confiança do mantenedor na primeira pergunta difícil.
+    <b>O relatório que a gente gera é o que você defende numa reunião sem medo.</b></div>
+  </div>
+</section>
+
+<!-- ============ CICLO ============ -->
+<section id="ciclo" style="background:var(--b1);border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">O ciclo essencial</div>
+      <h2>Quatro passos que cabem em <em>um minuto</em> de fila</h2>
+      <p>Nenhuma tela pede mais do que o operador consegue responder com a pessoa na frente dele.
+      A profundidade existe — ela só não atrapalha quem está no atendimento.</p>
+    </div>
+    <div class="ciclo ap">
+      <div class="et"><b>Identificar</b><span>Busca instantânea por nome, apelido, CPF, documento,
+      telefone ou código. Se não achar, cadastra em segundos — foto e nome bastam.</span></div>
+      <div class="et"><b>Atender</b><span>Vários serviços de uma vez, num toque cada. Almoço, banho,
+      cesta, orientação — o catálogo é da instituição, não nosso.</span></div>
+      <div class="et"><b>Registrar</b><span>Observação e anexo em qualquer ponto: foto na hora,
+      arquivo, PDF. O que não foi registrado não aconteceu para o relatório.</span></div>
+      <div class="et"><b>Acompanhar</b><span>Prontuário em linha do tempo, pendências com atrasados
+      em evidência e retornos que ninguém precisa lembrar de cabeça.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MÓDULOS ============ -->
+<section id="modulos">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">Módulos</div>
+      <h2>Tudo o que a instituição já faz — <em>organizado</em></h2>
+      <p>Você liga o que precisa. O que não faz sentido para a sua realidade fica desligado e
+      não polui a tela de ninguém.</p>
+    </div>
+
+    <div class="mods ap">
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Prontuário institucional</h3></div>
+        <p>A trajetória da pessoa em linha do tempo, do primeiro atendimento até hoje.</p>
+        <ul>
+          <li>Histórico completo por pessoa e por família</li>
+          <li>Observação obrigatória onde importa</li>
+          <li>Anexos: foto, documento, comprovante</li>
+          <li>Identificação pela câmera, com confirmação humana</li>
+          <li>Prevenção ativa de cadastro duplicado</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Assistente</h3></div>
+        <p>O registro de quem acompanha o caso, separado do atendimento do dia.</p>
+        <ul>
+          <li>Acolhimento, entrevista, orientação, visita e evolução</li>
+          <li>Encaminhamento para a rede, com retorno</li>
+          <li>Produtividade que conta ligação e documento, não só presença</li>
+          <li>Quem lê cada registro é definido pela instituição</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Presença no lugar</h3></div>
+        <p>Quantas pessoas estão fisicamente dentro do espaço, agora.</p>
+        <ul>
+          <li>Check-in automático ao registrar o atendimento</li>
+          <li>Lista de quem ainda não recebeu abordagem</li>
+          <li>Ocupação contra a capacidade do salão</li>
+          <li>Fechamento do dia sem inventar horário de saída</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Doações</h3></div>
+        <p>O que entra e o que sai, com comprovante dos dois lados.</p>
+        <ul>
+          <li>Entrada por doador pessoa ou organização</li>
+          <li>Saída para pessoa, família, instituição ou projeto</li>
+          <li>Histórico por doador, por item e por categoria</li>
+          <li>Preparado para virar controle de estoque</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Relatórios</h3></div>
+        <p>O número que você leva para a reunião, com a conta certa por trás.</p>
+        <ul>
+          <li>Resumo diário automático no fim do expediente</li>
+          <li>Relatório mensal em PDF com cara institucional</li>
+          <li>Filtros por período, unidade, serviço e profissional</li>
+          <li>Exportação para planilha</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Mural de impacto</h3></div>
+        <p>Um aplicativo na smart TV da recepção, mostrando o que a instituição fez — sem expor ninguém.</p>
+        <ul>
+          <li>Instala pela loja da própria televisão</li>
+          <li>Resumo ao vivo: quantas pessoas estão dentro agora</li>
+          <li>Um número por tela, legível a três metros</li>
+          <li>Números agregados, nenhum nome e nenhuma foto</li>
+          <li>Roda o dia inteiro sem alguém cuidando</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ O LUGAR ============ -->
+<section id="lugar" class="escuro">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">Presença em tempo real</div>
+      <h2>Ninguém fica lá dentro <em>sem abordagem</em></h2>
+      <p>No restaurante comunitário, no centro de convivência, no acolhimento — saber quantas
+      pessoas estão no salão neste momento muda a operação do turno. E saber quem ainda não foi
+      abordado muda a vida de alguém.</p>
+    </div>
+
+    <div class="duplo">
+      <ul class="lista ap">
+        <li><b>O check-in acontece sozinho</b><span>Quando o operador registra o atendimento em um
+        espaço controlado, a entrada da pessoa é registrada junto. Ninguém digita duas vezes.</span></li>
+        <li><b>A lista de quem falta</b><span>Todo mundo que entrou e ainda não recebeu abordagem
+        de um operador ou da assistente aparece num painel só — não numa busca que alguém
+        precisa lembrar de fazer.</span></li>
+        <li><b>Capacidade à vista</b><span>O salão tem um limite. O painel mostra quanto falta para
+        chegar nele, antes de virar um problema de segurança.</span></li>
+        <li><b>Fim do dia honesto</b><span>Quem saiu sem passar pela saída fica marcado como
+        "saída não registrada". O sistema nunca inventa um horário que ninguém viu.</span></li>
+      </ul>
+
+      <div class="painel ap">
+        <div class="top"><b>Restaurante Comunitário</b><small>11:42</small></div>
+        <div class="big">
+          <span class="n" id="cnt">0</span>
+          <span class="l">pessoas<br>dentro agora</span>
+        </div>
+        <div class="cap">
+          <div class="tr"><i id="bar"></i></div>
+          <div class="lg"><span>Capacidade 120</span><span id="pct">—</span></div>
+        </div>
+        <div class="alerta">
+          <b>4 pessoas ainda sem abordagem</b>
+          <span>A mais antiga entrou há 38 minutos.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INSPIRAÇÃO ============ -->
+<section id="cuidado">
+  <div class="lim">
+    <div class="inspira ap">
+      <div class="arte">
+        <svg viewBox="0 0 460 380" role="img" aria-label="Mãos entregando um prato quente, e o cuidado virando registro">
+          <defs>
+            <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#FFF3E9"/><stop offset="1" stop-color="#FFE3CD"/>
+            </linearGradient>
+            <linearGradient id="quente" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#FF9552"/><stop offset="1" stop-color="#E0550C"/>
+            </linearGradient>
+          </defs>
+          <circle cx="230" cy="176" r="150" fill="url(#ceu)"/>
+          <!-- vapor: o cuidado que sobe -->
+          <g stroke="#F0A472" stroke-width="5" stroke-linecap="round" fill="none" opacity=".85">
+            <path d="M198 118c-13-16 13-25 0-42"><animate attributeName="opacity" values=".3;.9;.3" dur="4s" repeatCount="indefinite"/></path>
+            <path d="M232 108c-14-18 14-28 0-46"><animate attributeName="opacity" values=".9;.35;.9" dur="4.6s" repeatCount="indefinite"/></path>
+            <path d="M266 118c-13-16 13-25 0-42"><animate attributeName="opacity" values=".5;1;.5" dur="5.2s" repeatCount="indefinite"/></path>
+          </g>
+          <!-- braço que entrega -->
+          <path d="M74 380C88 302 114 262 156 246" fill="none" stroke="#C2500C"
+                stroke-width="21" stroke-linecap="round"/>
+          <ellipse cx="166" cy="243" rx="27" ry="15" fill="#C2500C" transform="rotate(-16 166 243)"/>
+          <!-- braço que recebe -->
+          <path d="M386 380C372 302 346 262 304 246" fill="none" stroke="#8A3E08"
+                stroke-width="21" stroke-linecap="round"/>
+          <ellipse cx="294" cy="243" rx="27" ry="15" fill="#8A3E08" transform="rotate(16 294 243)"/>
+          <!-- prato -->
+          <path d="M150 176h160c0 40-36 66-80 66s-80-26-80-66z" fill="url(#quente)"/>
+          <ellipse cx="230" cy="176" rx="80" ry="15" fill="#FFC79B"/>
+          <!-- o registro: fichas alinhadas -->
+          <g transform="translate(322 262)">
+            <rect x="0" y="0" width="104" height="26" rx="7" fill="#fff" stroke="#F8D4B6"/>
+            <circle cx="15" cy="13" r="5.5" fill="#F26A1B"/>
+            <rect x="27" y="8" width="60" height="4" rx="2" fill="#E7DED6"/>
+            <rect x="27" y="16" width="38" height="4" rx="2" fill="#EFE8E2"/>
+            <rect x="0" y="34" width="104" height="26" rx="7" fill="#fff" stroke="#F8D4B6"/>
+            <circle cx="15" cy="47" r="5.5" fill="#12805C"/>
+            <rect x="27" y="42" width="52" height="4" rx="2" fill="#E7DED6"/>
+            <rect x="27" y="50" width="44" height="4" rx="2" fill="#EFE8E2"/>
+            <rect x="0" y="68" width="104" height="26" rx="7" fill="#fff" stroke="#F8D4B6"/>
+            <circle cx="15" cy="81" r="5.5" fill="#F26A1B"/>
+            <rect x="27" y="76" width="64" height="4" rx="2" fill="#E7DED6"/>
+            <rect x="27" y="84" width="30" height="4" rx="2" fill="#EFE8E2"/>
+          </g>
+          <!-- coração pequeno, sem gritar -->
+          <path d="M110 92c0-11 8-19 19-19 7 0 13 4 15 9 2-5 8-9 15-9 11 0 19 8 19 19 0 19-22 32-34 40-12-8-34-21-34-40z"
+                fill="#F26A1B" opacity=".2"/>
+        </svg>
+      </div>
+      <div class="txt">
+        <div class="olho">Por que isso importa</div>
+        <h2>Trabalho organizado tem <em>outro cheiro</em></h2>
+        <p>Quem cuida de gente carrega um trabalho que quase ninguém vê. O almoço servido, a
+        conversa que evitou uma noite na rua, o documento que finalmente saiu. Tudo isso acontece
+        e depois some, porque ficou num caderno, num grupo de mensagem, na memória de quem estava
+        lá naquele dia.</p>
+        <p>A gente existe para que esse cuidado deixe rastro. Não para transformar pessoas em
+        números, mas para que a sua instituição consiga <b>mostrar com clareza a quem financia</b>
+        o que de fato aconteceu: quantas pessoas, quais serviços, em que dias, com que resultado.</p>
+        <p class="frase">Nossa missão é te dar a ferramenta para que você demonstre, com transparência
+        e sem esforço, a movimentação real do seu projeto social. O trabalho já é bonito. Ele só
+        precisava ficar visível.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAPÉIS ============ -->
+<section style="background:var(--b1);border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">Cada um vê o que precisa</div>
+      <h2>Quatro necessidades diferentes, <em>um banco só</em></h2>
+      <p>A tensão do produto é essa: o operador precisa de simplicidade absoluta, a presidência
+      precisa de profundidade e a assistente precisa de acompanhar o caso ao longo do tempo.
+      Cada papel abre numa tela diferente, com o que aquela pessoa realmente usa.</p>
+    </div>
+    <div class="papeis ap">
+      <div class="papel"><div class="q">Na ponta</div><b>Operador</b><span>Quatro ações grandes e
+      nada mais. Identifica, atende, registra e vê quem está dentro. Sem relatório, sem
+      configuração, sem distração.</span></div>
+      <div class="papel"><div class="q">Acompanhamento</div><b>Assistente</b><span>Prontuário
+      completo, registro de trabalho, pendências e retornos, encaminhamentos para a rede e
+      produtividade real — não só atendimento presencial.</span></div>
+      <div class="papel"><div class="q">Turno</div><b>Coordenador</b><span>A operação da unidade no
+      dia: quem está escalado, o que travou, o que ficou pendente e onde a fila está apertando.</span></div>
+      <div class="papel"><div class="q">Institucional</div><b>Presidente</b><span>O retrato da
+      instituição inteira: pessoas alcançadas, serviços entregues, doações, evolução no tempo e o
+      relatório do mês pronto.</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ ALÉM DA OPERAÇÃO ============ -->
+<section id="conexoes" style="background:var(--b1);border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">Além das quatro paredes</div>
+      <h2>Sua instituição não trabalha <em>sozinha</em></h2>
+      <p>O atendimento começa no seu balcão, mas quase sempre passa pelo CRAS, por uma clínica
+      parceira, por uma escola, por um conselho. O 360social foi feito para essa rede existir
+      no sistema, e não só no grupo de WhatsApp.</p>
+    </div>
+
+    <div class="mods ap">
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>A TV que mostra o agora</h3></div>
+        <p>O aplicativo do mural roda na smart TV da recepção e mostra os números em tempo real.</p>
+        <ul>
+          <li>App instalável direto na loja da televisão</li>
+          <li>Quantas pessoas estão dentro neste momento</li>
+          <li>Pessoas alcançadas e serviços entregues no dia</li>
+          <li>Atualiza sozinho, sem ninguém operar</li>
+          <li>Só números agregados — nenhum nome, nenhuma foto</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Prestação de contas ao poder público</h3></div>
+        <p>O que o município, o estado e o conselho pedem, no formato em que eles pedem.</p>
+        <ul>
+          <li>Exportação por período, serviço e território</li>
+          <li>Planilha e PDF com identidade da instituição</li>
+          <li>Encaminhamentos para CRAS, CREAS e rede de saúde</li>
+          <li>Retorno do encaminhamento registrado na trajetória</li>
+          <li>Trilha de auditoria para quando o número for questionado</li>
+        </ul>
+      </div>
+      <div class="mod">
+        <div class="cab"><span class="pt"></span><h3>Relacionamento com parceiros</h3></div>
+        <p>Manter quem apoia por perto também é trabalho — e dá para automatizar.</p>
+        <ul>
+          <li>Envio de resumos e comunicados para instituições parceiras</li>
+          <li>Listas separadas por projeto e por mantenedor</li>
+          <li>Convite para eventos, mutirões e campanhas</li>
+          <li>Registro de quem recebeu e quando</li>
+          <li>Sempre sem dado pessoal de quem é atendido</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESUMO PARA INVESTIDORES ============ -->
+<section id="investidores">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">Transparência</div>
+      <h2>Seu investidor recebe o resumo <em>toda semana</em>, sem você lembrar</h2>
+      <p>Quem apoia o seu projeto quer saber se o dinheiro virou cuidado. Em vez de esperar a
+      cobrança e correr atrás de número em cima da hora, a plataforma manda sozinha.</p>
+    </div>
+
+    <div class="semanal ap">
+      <div>
+        <h3>Um e-mail bonito, com os números <em>que você defende</em></h3>
+        <p>Você escolhe quem recebe, o dia e a hora. O resumo sai com a identidade da sua
+        instituição, e o investidor abre no celular sem precisar de senha nem de conta.</p>
+        <ul>
+          <li>Pessoas alcançadas na semana e no acumulado do ano</li>
+          <li>Atendimentos entregues, abertos por serviço</li>
+          <li>Doações recebidas e distribuídas, com comprovante registrado</li>
+          <li>Comparação com a semana anterior, para mostrar tendência</li>
+          <li>Lista de destinatários por projeto — cada mantenedor vê o que patrocina</li>
+        </ul>
+        <p style="font-size:14.5px;color:var(--tx3);margin-top:20px">Sem nome, sem foto e sem
+        documento de nenhuma pessoa atendida. Transparência de resultado não exige expor quem
+        foi ajudado.</p>
+      </div>
+
+      <div class="carta-mail ap">
+        <div class="cab2">
+          <div class="de">de Projeto Social Cidade Melhor · para conselho@mantenedora.org.br</div>
+          <div class="as">Semana de 20 a 26 de julho — o que aconteceu</div>
+        </div>
+        <div class="mio">
+          <div class="ola">Olá, Helena. Segue o resumo da semana no Projeto Social Cidade Melhor.</div>
+          <div class="nums">
+            <div><b>418</b><span>pessoas alcançadas</span></div>
+            <div><b>1.106</b><span>atendimentos</span></div>
+            <div><b>+12%</b><span>sobre a semana anterior</span></div>
+            <div><b>63</b><span>doações distribuídas</span></div>
+          </div>
+          <div class="barrinhas">
+            <i style="height:46%"></i><i style="height:62%"></i><i style="height:55%"></i>
+            <i style="height:78%"></i><i style="height:70%"></i><i style="height:22%"></i>
+            <i style="height:14%"></i>
+          </div>
+        </div>
+        <div class="pe3">Enviado automaticamente pelo 360social · segunda-feira, 08:00</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLANOS ============ -->
+<section id="planos" style="background:var(--b1);border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)">
+  <div class="lim">
+    <div class="tit ap">
+      <div class="olho">Planos</div>
+      <h2>Comece agora. <em>Sete dias grátis</em>, sem cartão.</h2>
+      <p>Desfrute das nossas soluções com planos a partir de R$ 149 por mês. Se não servir para a
+      sua realidade, é só não continuar — não pedimos cartão para você experimentar.</p>
+    </div>
+
+    <div class="planos ap">
+      <div class="plano">
+        <div class="nm">Início</div>
+        <div class="pr"><span class="v">R$ 149</span><span class="u">/mês</span></div>
+        <div class="de">Para quem está começando a organizar o atendimento.</div>
+        <ul>
+          <li>Até <b>100 pessoas</b> cadastradas</li>
+          <li><b>Atendimentos ilimitados</b></li>
+          <li>Prontuário, presença em tempo real e doações</li>
+          <li>Mural na TV com resumo ao vivo</li>
+          <li>Relatório mensal em PDF</li>
+        </ul>
+        <a class="bt sec gr" href="https://app.360social.com.br/">Testar 7 dias grátis</a>
+      </div>
+
+      <div class="plano destacado">
+        <div class="nm">Impacto</div>
+        <div class="pr"><span class="v">R$ 199</span><span class="u">/mês</span></div>
+        <div class="de">Para instituições com mais de um serviço e mantenedores para prestar contas.</div>
+        <ul>
+          <li>Até <b>500 pessoas</b> cadastradas</li>
+          <li>Atendimentos ilimitados</li>
+          <li>Unidades ilimitadas</li>
+          <li><b>Resumo semanal automático</b> para investidores</li>
+          <li>Envio de conteúdo para instituições parceiras</li>
+          <li>Identificação pela câmera</li>
+        </ul>
+        <a class="bt pri gr" href="https://app.360social.com.br/">Testar 7 dias grátis</a>
+      </div>
+
+      <div class="plano">
+        <div class="nm">Rede</div>
+        <div class="pr"><span class="v">R$ 299</span><span class="u">/mês</span></div>
+        <div class="de">Para redes e instituições com várias frentes e prestação de contas ao poder público.</div>
+        <ul>
+          <li>Até <b>1.000 pessoas</b> cadastradas</li>
+          <li>Atendimentos ilimitados</li>
+          <li>Várias instituições no mesmo painel</li>
+          <li><b>Exportação para órgãos públicos</b></li>
+          <li>Identidade própria nos relatórios e e-mails</li>
+          <li>Acompanhamento de implantação</li>
+        </ul>
+        <a class="bt sec gr" href="https://app.360social.com.br/">Testar 7 dias grátis</a>
+      </div>
+    </div>
+
+    <p style="text-align:center;margin-top:26px;font-size:14.5px;color:var(--tx3)">
+      Acima de 1.000 pessoas cadastradas, a gente monta um plano com você —
+      <a href="mailto:contato@360social.com.br?subject=Mais%20de%201.000%20pessoas%20—%20360social"
+         style="color:var(--lar);font-weight:700">fale com a gente</a>.<br>
+      Todos os planos incluem suporte em português, atualizações e backup diário.
+      Valores em reais, com nota fiscal.</p>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section id="comecar" style="padding-top:20px">
+  <div class="lim">
+    <div class="chamada ap">
+      <svg class="roda" viewBox="0 0 340 200" role="img" aria-label="Pessoas em roda, o círculo que se fecha em volta de alguém">
+        <g fill="none" stroke="#F26A1B" stroke-width="7" stroke-linecap="round" opacity=".92">
+          <path d="M212 46a72 72 0 0 1 46 62"/>
+          <path d="M212 154a72 72 0 0 1-84 0"/>
+          <path d="M82 108a72 72 0 0 1 46-62"/>
+        </g>
+        <circle cx="170" cy="100" r="17" fill="#F26A1B"/>
+        <g fill="#FFC79B">
+          <g transform="translate(170 18)"><circle cy="-2" r="9"/><path d="M-13 22a13 15 0 0 1 26 0z"/></g>
+          <g transform="translate(241 59)"><circle cy="-2" r="9"/><path d="M-13 22a13 15 0 0 1 26 0z"/></g>
+          <g transform="translate(241 141)"><circle cy="-2" r="9"/><path d="M-13 22a13 15 0 0 1 26 0z"/></g>
+          <g transform="translate(170 182)"><circle cy="-2" r="9"/><path d="M-13 22a13 15 0 0 1 26 0z"/></g>
+          <g transform="translate(99 141)"><circle cy="-2" r="9"/><path d="M-13 22a13 15 0 0 1 26 0z"/></g>
+          <g transform="translate(99 59)"><circle cy="-2" r="9"/><path d="M-13 22a13 15 0 0 1 26 0z"/></g>
+        </g>
+      </svg>
+      <h2>Sete dias para ver o seu trabalho ganhar forma</h2>
+      <p>Crie a conta da sua instituição em poucos minutos, cadastre as primeiras pessoas e veja
+      o painel encher com o que vocês já fazem todo dia.</p>
+      <div class="acoes">
+        <a class="bt pri gr" href="https://app.360social.com.br/">Começar agora, grátis</a>
+        <a class="bt fan gr" href="#planos">Ver os planos</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="lim">
+    <div class="rod">
+      <div class="sobre">
+        <div class="marca">
+          <svg style="color:var(--lar)"><use href="#s360"/></svg>
+          <b>360<i>social</i></b>
+        </div>
+        <p>Plataforma de gestão de atendimento e impacto social para instituições brasileiras.
+        Identificar, atender, acompanhar — o círculo que se fecha em volta de uma pessoa.</p>
+      </div>
+      <div class="col">
+        <b>Produto</b>
+        <a href="#ciclo">Como funciona</a>
+        <a href="#modulos">Módulos</a>
+        <a href="#lugar">Presença em tempo real</a>
+        <a href="#conexoes">TV, órgãos públicos e parceiros</a>
+        <a href="#investidores">Resumo para investidores</a>
+      </div>
+      <div class="col">
+        <b>Comece</b>
+        <a href="#planos">Planos e preços</a>
+        <a href="https://app.360social.com.br/">Testar 7 dias grátis</a>
+        <a href="https://app.360social.com.br/">Entrar na plataforma</a>
+      </div>
+      <div class="col">
+        <b>Contato</b>
+        <a href="mailto:contato@360social.com.br">contato@360social.com.br</a>
+        <span class="brasil">
+          <svg viewBox="0 0 28 20" width="20" height="14" aria-hidden="true">
+            <rect width="28" height="20" rx="2.5" fill="#009B3A"/>
+            <path d="M14 2.6 25.4 10 14 17.4 2.6 10z" fill="#FEDF00"/>
+            <circle cx="14" cy="10" r="4.3" fill="#002776"/>
+            <path d="M9.9 8.6a11 11 0 0 1 8.4 2.3" stroke="#fff" stroke-width="1.1" fill="none"/>
+          </svg>
+          <b style="font-weight:750;color:var(--tx2)">ARBOR Labs</b>
+        </span>
+        <span style="margin-top:-4px">desenvolvido orgulhosamente no Brasil</span>
+      </div>
+    </div>
+    <div class="fim">
+      <span>© <span id="ano">2026</span> 360social · Arbor Labs. Todos os direitos reservados.</span>
+      <span class="arb">Servidores no Brasil · valores em reais, com nota fiscal</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  document.getElementById('ano').textContent = new Date().getFullYear();
+
+  var topo = document.getElementById('topo');
+  var aoRolar = function(){ topo.classList.toggle('desce', window.scrollY > 8); };
+  aoRolar(); window.addEventListener('scroll', aoRolar, {passive:true});
+
+  var alvos = document.querySelectorAll('.ap');
+  if(!('IntersectionObserver' in window)){
+    alvos.forEach(function(e){ e.classList.add('viu'); });
+  } else {
+    var ob = new IntersectionObserver(function(ent){
+      ent.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('viu'); ob.unobserve(e.target); }
+      });
+    }, {rootMargin:'0px 0px -8% 0px', threshold:.08});
+    alvos.forEach(function(e){ ob.observe(e); });
+  }
+
+  // contador do painel de presença
+  var cnt = document.getElementById('cnt'), bar = document.getElementById('bar'),
+      pct = document.getElementById('pct'), alvo = 87, cap = 120, rodou = false;
+  function anima(){
+    if(rodou) return; rodou = true;
+    var ini = null, dur = 1500;
+    function passo(t){
+      if(ini === null) ini = t;
+      var p = Math.min((t - ini) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      cnt.textContent = Math.round(alvo * e);
+      var r = Math.round(alvo * e / cap * 100);
+      bar.style.width = r + '%';
+      pct.textContent = r + '% ocupado';
+      if(p < 1) requestAnimationFrame(passo);
+    }
+    requestAnimationFrame(passo);
+  }
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+    cnt.textContent = alvo; bar.style.width = Math.round(alvo/cap*100)+'%';
+    pct.textContent = Math.round(alvo/cap*100)+'% ocupado';
+  } else if('IntersectionObserver' in window){
+    var ob2 = new IntersectionObserver(function(ent){
+      ent.forEach(function(e){ if(e.isIntersecting){ anima(); ob2.disconnect(); } });
+    }, {threshold:.35});
+    ob2.observe(document.querySelector('.painel'));
+    // rede de segurança: se por qualquer motivo o observador não disparar,
+    // o painel não pode ficar mostrando zero.
+    setTimeout(function(){
+      var r = document.querySelector('.painel').getBoundingClientRect();
+      if(r.top < innerHeight && r.bottom > 0){ anima(); ob2.disconnect(); }
+    }, 4000);
+  } else { anima(); }
+})();
+</script>
+</body>
+</html>
