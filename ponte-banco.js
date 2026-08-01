@@ -298,12 +298,17 @@ async function confirmarCadastroCompleto(){
   if(senha.length < 6){ msg.textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
 
   msg.textContent = 'Criando sua conta…';
+  // emailRedirectTo é essencial aqui: o projeto Supabase é compartilhado
+  // entre 360social e MODOX (mesmo backend de autenticação), então sem
+  // isso o link de confirmação usa a "Site URL" padrão do projeto — que é
+  // do MODOX — e a pessoa confirma o e-mail mas cai dentro do app errado.
+  // Mesma lógica já usada em pedirRedefinirSenha() logo acima.
   const { data: signData, error: signErr } = await sbc.auth.signUp({
     email, password: senha,
     options: { data: {
       tipo_pessoa: CC_TIPO, documento: docDigitos, nome_instituicao: nomeInst,
       nome_pessoa: nomePessoa, telefone, cidade, endereco
-    } }
+    }, emailRedirectTo: location.origin + location.pathname }
   });
   if(signErr){
     console.error('[banco] signUp', signErr);
