@@ -897,6 +897,17 @@ const STATUS_PLANO_INST_L = {
   atrasada:'⚠️ pagamento atrasado', cancelada:'⛔ cancelado', sem_assinatura:null,
 };
 const PLANO = { plano:null, status:'sem_assinatura', ativa_ate:null };
+/* Plano escolhido no site (360social.com.br/#planos → ?plano=inicio|impacto|rede),
+   lido uma única vez na carga. Serve pra, assim que a pessoa entrar (seja
+   sessão já existente ou instituição recém-criada), abrir direto na aba
+   Plano e assinatura com o card certo destacado — em vez de largar ela no
+   painel geral e ela ter que descobrir sozinha onde fica o botão Assinar. */
+const PLANO_ALVO = (() => {
+  try{
+    const v = new URLSearchParams(location.search).get('plano');
+    return (v && PLANOS_INST[v]) ? v : null;
+  }catch(e){ return null; }
+})();
 
 /* ------------------------------------------------------------
    Envios por e-mail
@@ -1779,8 +1790,10 @@ function blocoPlano(){
         ${esc(PLANOS_INST[PLANO.plano]?.nome||PLANO.plano)} — ${esc(statusTxt||PLANO.status)}
         ${PLANO.ativa_ate ? ' · válido até '+new Date(PLANO.ativa_ate).toLocaleDateString('pt-BR') : ''}</div>` : ''}
     <div id="plano-opcoes" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
-      ${Object.entries(PLANOS_INST).map(([k,v]) => `<div class="pn" style="flex:1;min-width:220px;margin:0">
+      ${Object.entries(PLANOS_INST).map(([k,v]) => `<div class="pn" id="plano-card-${k}" style="flex:1;min-width:220px;margin:0
+          ${PLANO_ALVO===k ? ';border-color:var(--lar);box-shadow:0 0 0 3px rgba(242,106,27,.15)' : ''}">
         <div class="cx">
+          ${PLANO_ALVO===k ? `<div style="font-size:11.5px;font-weight:700;color:var(--lar-esc);margin-bottom:4px">PLANO ESCOLHIDO NO SITE</div>` : ''}
           <b style="font-size:14.5px">${esc(v.nome)}</b>
           <div style="font-size:20px;font-weight:800;margin:6px 0 2px">R$ ${v.preco}<span style="font-size:12.5px;font-weight:600;color:var(--tx3)">/mês</span></div>
           <div style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">Até ${v.pessoas} pessoas cadastradas</div>

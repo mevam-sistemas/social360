@@ -59,8 +59,19 @@ function abrirEntrar(){
   const o = document.createElement('div'); o.id = 'entrar-ov';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
     + 'display:flex;align-items:center;justify-content:center;padding:18px';
+  // veio de um card de plano no site (?plano=inicio|impacto|rede): mostra o
+  // plano escolhido aqui em cima, pra quem clicou "Testar 7 dias grátis" e
+  // não tem conta ainda entender que o próximo passo é criar a instituição
+  // — sem isso a pessoa cai numa tela igual à de sempre e acha que não
+  // aconteceu nada.
+  const p = (typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO && typeof PLANOS_INST !== 'undefined') ? PLANOS_INST[PLANO_ALVO] : null;
+  const notaPlano = p ? `<div style="background:#fff1e6;border:1px solid #f2c99b;border-radius:10px;
+      padding:9px 12px;margin-bottom:14px;font-size:13px;color:#8f3907">Plano escolhido:
+      <b>${p.nome}</b> — R$ ${p.preco}/mês. É só criar sua instituição abaixo (sete dias grátis,
+      sem cartão) que já te levamos direto pra assinar.</div>` : '';
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
     <h2 style="margin:0 0 6px;font-size:19px">Entrar na sua instituição</h2>
+    ${notaPlano}
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Use o e-mail com que você foi
       cadastrado na equipe. Se já tem senha, entre direto; se não, deixe o campo de senha em
       branco e mandamos um código de 6 dígitos.</p>
@@ -192,7 +203,16 @@ async function entrarComVinculo(data, viaCodigo){
     if(b.textContent.trim() === 'Trocar' || b.textContent.trim() === 'Entrar') b.textContent = 'Sair';
     b.onclick = trocarPapel;
   });
-  identidade(); irMenu(inicioDoPapel());
+  identidade();
+  // veio de um card de plano no site (360social.com.br/#planos) — abre já
+  // na aba de assinatura com o plano certo destacado, em vez de largar a
+  // pessoa no painel geral pra ela ter que descobrir sozinha onde assina.
+  if(PLANO_ALVO && typeof abrirInstituicao === 'function'){
+    abrirInstituicao('plano');
+    try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  } else {
+    irMenu(inicioDoPapel());
+  }
   // quem entrou por código (sem senha) ganha o convite pra definir uma — só
   // uma vez por sessão, nunca obrigatório, login por código continua igual.
   if(viaCodigo) setTimeout(oferecerDefinirSenha, 900);
@@ -211,8 +231,13 @@ function mostrarCriarInstituicao(){
   const o = document.createElement('div'); o.id = 'criar-inst-ov';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
     + 'display:flex;align-items:center;justify-content:center;padding:18px';
+  const p = (typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO && typeof PLANOS_INST !== 'undefined') ? PLANOS_INST[PLANO_ALVO] : null;
+  const notaPlano = p ? `<div style="background:#fff1e6;border:1px solid #f2c99b;border-radius:10px;
+      padding:9px 12px;margin-bottom:14px;font-size:13px;color:#8f3907">Plano escolhido:
+      <b>${p.nome}</b> — R$ ${p.preco}/mês. Depois de criar, já te levamos direto pra assinar.</div>` : '';
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:400px;width:100%">
     <h2 style="margin:0 0 6px;font-size:19px">Este e-mail ainda não está em nenhuma instituição</h2>
+    ${notaPlano}
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Se você já faz parte de uma instituição no
       360social, peça a quem coordena para te adicionar em Instituição → Equipe e acessos. Se é a
       primeira vez, crie a instituição agora — sete dias grátis, sem cartão.</p>
@@ -858,4 +883,10 @@ function esperarPlanoInstituicao(bloqueado, url){
     b.id = 'bt-entrar'; b.textContent = 'Entrar'; b.onclick = abrirEntrar;
     rod.appendChild(b);
   }
+  // veio de um card de plano no site (?plano=...) e não tem sessão salva:
+  // sem isso a pessoa cai na demonstração de sempre, sem nada na tela
+  // indicando que o clique em "Testar 7 dias grátis" fez alguma diferença
+  // — abre o Entrar/criar instituição na hora, já com o plano escolhido
+  // mostrado ali dentro.
+  if(typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO) abrirEntrar();
 })();
