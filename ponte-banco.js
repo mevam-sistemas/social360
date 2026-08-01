@@ -110,12 +110,20 @@ async function confirmarCodigo(){
    ============================================================ */
 async function conectar(){
   const { data, error } = await sbc.rpc('vincular_meu_acesso');
-  if(error || !data){
-    alert('Este e-mail não está na equipe de nenhuma instituição do 360social.\n\n'
-      + 'Peça a quem coordena para adicionar você em Instituição → Equipe e acessos.');
-    await sbc.auth.signOut();
+  if(error){
+    avisoDB('a conexão'); await sbc.auth.signOut(); return;
+  }
+  if(!data){
+    /* e-mail novo, sem equipe em nenhuma instituição: antes disso era beco
+       sem saída (alerta + logout). Agora oferece criar a instituição na
+       hora — self-service, igual ao que o site já promete. */
+    mostrarCriarInstituicao();
     return;
   }
+  await entrarComVinculo(data);
+}
+
+async function entrarComVinculo(data){
   CONEXAO.eu = data; CONEXAO.orgId = data.instituicao_id;
   try{
     await carregarTudo();
@@ -131,6 +139,63 @@ async function conectar(){
     b.onclick = trocarPapel;
   });
   identidade(); irMenu(inicioDoPapel());
+}
+
+/* ============================================================
+   CRIAR MINHA INSTITUIÇÃO — cadastro self-service (01/08/2026).
+   Aparece quando o e-mail que acabou de confirmar o código não está em
+   nenhuma equipe: antes disso era beco sem saída (site prometia "crie a
+   conta da sua instituição", app só sabia dizer "peça pra te adicionarem").
+   ============================================================ */
+function mostrarCriarInstituicao(){
+  fecharCriarInstituicao();
+  const o = document.createElement('div'); o.id = 'criar-inst-ov';
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
+    + 'display:flex;align-items:center;justify-content:center;padding:18px';
+  o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:400px;width:100%">
+    <h2 style="margin:0 0 6px;font-size:19px">Este e-mail ainda não está em nenhuma instituição</h2>
+    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Se você já faz parte de uma instituição no
+      360social, peça a quem coordena para te adicionar em Instituição → Equipe e acessos. Se é a
+      primeira vez, crie a instituição agora — sete dias grátis, sem cartão.</p>
+    <label style="font-size:13px;color:#6b625a">Nome da instituição</label>
+    <input id="ci-inst" placeholder="Ex.: Projeto Social Cidade Melhor" autocomplete="organization"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">Seu nome</label>
+    <input id="ci-nome" placeholder="Como você quer ser chamado" autocomplete="name"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">Cidade <span style="opacity:.6">— opcional</span></label>
+    <input id="ci-cidade" placeholder="Ex.: Itajaí — SC"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 14px;box-sizing:border-box">
+    <button onclick="confirmarCriarInstituicao()" class="bt" style="width:100%">Criar minha instituição</button>
+    <div id="ci-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
+    <button onclick="cancelarCriarInstituicao()" style="margin-top:14px;background:none;border:none;color:#6b625a;
+      font-size:13px;cursor:pointer;text-decoration:underline">Sair</button>
+  </div>`;
+  document.body.appendChild(o);
+  setTimeout(() => { const e = document.getElementById('ci-inst'); if(e) e.focus(); }, 60);
+}
+function fecharCriarInstituicao(){ const o = document.getElementById('criar-inst-ov'); if(o) o.remove(); }
+async function confirmarCriarInstituicao(){
+  const inst = (document.getElementById('ci-inst').value || '').trim();
+  const nome = (document.getElementById('ci-nome').value || '').trim();
+  const cidade = (document.getElementById('ci-cidade').value || '').trim();
+  const msg = document.getElementById('ci-msg');
+  if(!inst){ msg.textContent = 'Dá um nome pra sua instituição.'; return; }
+  if(!nome){ msg.textContent = 'Falta o seu nome.'; return; }
+  msg.textContent = 'Criando…';
+  const { data, error } = await sbc.rpc('criar_minha_instituicao',
+    { p_nome_instituicao: inst, p_nome_pessoa: nome, p_cidade: cidade || null });
+  if(error || !data){
+    console.error('[banco] criar instituição', error);
+    msg.textContent = 'Não consegui criar agora. Tente de novo em instantes.';
+    return;
+  }
+  fecharCriarInstituicao();
+  await entrarComVinculo(data);
+}
+async function cancelarCriarInstituicao(){
+  fecharCriarInstituicao();
+  await sbc.auth.signOut();
 }
 
 function nomeDe(eqId){
