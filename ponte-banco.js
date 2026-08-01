@@ -20,6 +20,9 @@ const SBS_KEY = 'sb_publishable_7-sR87eV6b4I8nx-k6Hriw_DEVprjfz'; /* chave públ
 const sbc = supabase.createClient(SBS_URL, SBS_KEY, { db: { schema: 'social' } });
 
 const CONEXAO = { ligada:false, eu:null, orgId:null };
+/* teste de 7 dias vencido sem assinatura ativa → app inteiro trava na tela
+   de assinar (01/08/2026). Populado por entrarComVinculo() via meu_acesso(). */
+let ACESSO = { bloqueado:false, dias_restantes:null, pode_assinar:false };
 /* papel no banco ⇄ papel na tela (a tela chama a assistente de 'social') */
 const P_DB2TELA = { operador:'operador', assistente:'social', coordenador:'coordenador', presidente:'presidente' };
 const P_TELA2DB = { operador:'operador', social:'assistente', coordenador:'coordenador', presidente:'presidente' };
@@ -51,144 +54,121 @@ function pushDB(q, oQue){
 }
 
 /* ============================================================
-   ENTRAR — e-mail → código → sessão. Sem senha para decorar.
+   ENTRAR — clientes já cadastrados (01/08/2026). Padrão Arbor Labs: só
+   e-mail + senha, sem código por e-mail. Quem esquece a senha pede um link
+   de redefinição (abaixo) — isso não é o mesmo que o código de login que
+   foi removido, é só uma forma de recuperar acesso à própria conta.
    ============================================================ */
-let emailPendente = '';
 function abrirEntrar(){
-  fecharEntrar();
+  fecharEntrar(); fecharCadastroCompleto();
   const o = document.createElement('div'); o.id = 'entrar-ov';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
     + 'display:flex;align-items:center;justify-content:center;padding:18px';
-  // veio de um card de plano no site (?plano=inicio|impacto|rede): mostra o
-  // plano escolhido aqui em cima, pra quem clicou "Testar 7 dias grátis" e
-  // não tem conta ainda entender que o próximo passo é criar a instituição
-  // — sem isso a pessoa cai numa tela igual à de sempre e acha que não
-  // aconteceu nada.
   const p = (typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO && typeof PLANOS_INST !== 'undefined') ? PLANOS_INST[PLANO_ALVO] : null;
   const notaPlano = p ? `<div style="background:#fff1e6;border:1px solid #f2c99b;border-radius:10px;
       padding:9px 12px;margin-bottom:14px;font-size:13px;color:#8f3907">Plano escolhido:
-      <b>${p.nome}</b> — R$ ${p.preco}/mês. É só criar sua instituição abaixo (sete dias grátis,
-      sem cartão) que já te levamos direto pra assinar.</div>` : '';
+      <b>${p.nome}</b> — R$ ${p.preco}/mês. Se você ainda não é cliente, clique em "Ainda não sou
+      cliente" abaixo pra criar sua conta.</div>` : '';
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
-    <h2 style="margin:0 0 6px;font-size:19px">Entrar na sua instituição</h2>
+    <h2 style="margin:0 0 6px;font-size:19px">Já sou cliente — Entrar</h2>
     ${notaPlano}
-    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Use o e-mail com que você foi
-      cadastrado na equipe. Se já tem senha, entre direto; se não, deixe o campo de senha em
-      branco e mandamos um código de 6 dígitos.</p>
-    <div id="ent-p1">
-      <input id="ent-email" type="email" placeholder="seu@email.com" autocomplete="email"
-        style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px">
-      <input id="ent-senha" type="password" placeholder="Senha — deixe em branco se não tiver"
-        autocomplete="current-password"
-        style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin-top:8px">
-      <button onclick="entrarComSenha()" class="bt" style="width:100%;margin-top:12px">Entrar</button>
-    </div>
-    <div id="ent-p2" style="display:none">
-      <input id="ent-cod" inputmode="numeric" placeholder="Código de 6 dígitos"
-        style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:17px;letter-spacing:.2em;text-align:center">
-      <button onclick="confirmarCodigo()" class="bt" style="width:100%;margin-top:12px">Entrar</button>
-    </div>
+    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Use o e-mail e a senha da sua conta.</p>
+    <input id="ent-email" type="email" placeholder="seu@email.com" autocomplete="email"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px">
+    <input id="ent-senha" type="password" placeholder="Senha" autocomplete="current-password"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin-top:8px">
+    <button onclick="entrarComSenha()" class="bt" style="width:100%;margin-top:12px">Entrar</button>
     <div id="ent-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
-    <button onclick="fecharEntrar()" style="margin-top:14px;background:none;border:none;color:#6b625a;
-      font-size:13px;cursor:pointer;text-decoration:underline">Continuar só olhando a demonstração</button>
+    <button onclick="pedirRedefinirSenha()" style="margin-top:14px;background:none;border:none;color:#6b625a;
+      font-size:13px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+    <button onclick="fecharEntrar();abrirCadastroCompleto()" style="display:block;margin-top:8px;background:none;border:none;color:#6b625a;
+      font-size:13px;cursor:pointer;text-decoration:underline">Ainda não sou cliente — criar conta</button>
   </div>`;
   document.body.appendChild(o);
   setTimeout(() => { const e = document.getElementById('ent-email'); if(e) e.focus(); }, 60);
 }
 function fecharEntrar(){ const o = document.getElementById('entrar-ov'); if(o) o.remove(); }
-/* botão único: com senha preenchida tenta login por senha; em branco, manda
-   o código por e-mail — mesmo comportamento de sempre pra quem nunca definiu
-   senha, então ninguém que já usava o código perde o próprio fluxo. */
 async function entrarComSenha(){
   const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
   const senha = document.getElementById('ent-senha').value || '';
   const msg = document.getElementById('ent-msg');
   if(!email.includes('@')){ msg.textContent = 'Confira o e-mail.'; return; }
-  if(!senha) return enviarCodigo();
+  if(!senha){ msg.textContent = 'Digite sua senha.'; return; }
   msg.textContent = 'Entrando…';
   const { error } = await sbc.auth.signInWithPassword({ email, password: senha });
-  if(error){ msg.textContent = 'E-mail ou senha não conferem. Se esqueceu a senha, deixe o campo em branco e entre por código.'; return; }
+  if(error){ msg.textContent = 'E-mail ou senha não conferem.'; return; }
   fecharEntrar();
   conectar();
 }
-async function enviarCodigo(){
+async function pedirRedefinirSenha(){
   const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
   const msg = document.getElementById('ent-msg');
-  if(!email.includes('@')){ msg.textContent = 'Confira o e-mail.'; return; }
-  msg.textContent = 'Enviando…';
-  const { error } = await sbc.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-  if(error){ console.error(error); msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.'; return; }
-  emailPendente = email;
-  document.getElementById('ent-p1').style.display = 'none';
-  document.getElementById('ent-p2').style.display = '';
-  msg.textContent = 'Código enviado para ' + email + '. Vale por alguns minutos.';
-  document.getElementById('ent-cod').focus();
-}
-async function confirmarCodigo(){
-  const cod = (document.getElementById('ent-cod').value || '').replace(/\D/g, '');
-  const msg = document.getElementById('ent-msg');
-  if(cod.length < 6){ msg.textContent = 'O código tem 6 dígitos.'; return; }
-  msg.textContent = 'Conferindo…';
-  const { error } = await sbc.auth.verifyOtp({ email: emailPendente, token: cod, type: 'email' });
-  if(error){ msg.textContent = 'Código não confere ou venceu. Peça outro.'; return; }
-  fecharEntrar();
-  conectar(true);
+  if(!email.includes('@')){ msg.textContent = 'Digite seu e-mail ali em cima primeiro.'; return; }
+  msg.textContent = 'Enviando link de redefinição…';
+  const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if(error){ console.error('[banco] redefinir senha', error); msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.'; return; }
+  msg.textContent = 'Te mandamos um link por e-mail pra redefinir a senha. Confira sua caixa de entrada.';
 }
 
 /* ============================================================
-   DEFINIR SENHA — oferecido uma vez, logo após entrar por código, pra quem
-   ainda não tem senha. Sem 2FA: é só entrar mais rápido da próxima vez.
-   Nunca é obrigatório e nunca aparece de novo na mesma sessão se fechado.
+   REDEFINIR SENHA — a pessoa chega aqui pelo link de "esqueci minha
+   senha" (evento PASSWORD_RECOVERY do Supabase, tratado no arranque lá
+   embaixo). Único jeito de recuperar acesso agora que não existe mais
+   código por e-mail.
    ============================================================ */
-let ofereceuSenha = false;
-function oferecerDefinirSenha(){
-  if(ofereceuSenha) return; ofereceuSenha = true;
-  const o = document.createElement('div'); o.id = 'senha-ov';
-  o.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9998;'
-    + 'background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.25);'
-    + 'max-width:360px;width:92vw';
-  o.innerHTML = `<b style="font-size:14px">Quer entrar mais rápido da próxima vez?</b>
-    <p style="margin:6px 0 10px;color:#6b625a;font-size:13px">Defina uma senha agora — sem senha
-      decorada, também dá pra continuar entrando por código sempre.</p>
-    <input id="ds-senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)"
-      style="width:100%;padding:9px 11px;border:1.5px solid #d8d0c6;border-radius:9px;font-size:14px;box-sizing:border-box">
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="confirmarDefinirSenha()" class="bt" style="flex:1">Definir senha</button>
-      <button onclick="document.getElementById('senha-ov').remove()"
-        style="background:none;border:none;color:#6b625a;font-size:13px;cursor:pointer">Agora não</button>
-    </div>
-    <div id="ds-msg" style="margin-top:8px;font-size:12.5px;color:#8f3907"></div>`;
+function abrirRedefinirSenha(){
+  fecharEntrar(); fecharCadastroCompleto();
+  const o = document.createElement('div'); o.id = 'redefinir-ov';
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
+    + 'display:flex;align-items:center;justify-content:center;padding:18px';
+  o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
+    <h2 style="margin:0 0 6px;font-size:19px">Escolher nova senha</h2>
+    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Defina a nova senha da sua conta.</p>
+    <input id="rs-senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px">
+    <button onclick="confirmarRedefinirSenha()" class="bt" style="width:100%;margin-top:12px">Salvar nova senha</button>
+    <div id="rs-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
+  </div>`;
   document.body.appendChild(o);
+  setTimeout(() => { const e = document.getElementById('rs-senha'); if(e) e.focus(); }, 60);
 }
-async function confirmarDefinirSenha(){
-  const senha = document.getElementById('ds-senha').value || '';
-  const msg = document.getElementById('ds-msg');
+async function confirmarRedefinirSenha(){
+  const senha = document.getElementById('rs-senha').value || '';
+  const msg = document.getElementById('rs-msg');
   if(senha.length < 6){ msg.textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
   msg.textContent = 'Salvando…';
   const { error } = await sbc.auth.updateUser({ password: senha });
-  if(error){ console.error('[banco] definir senha', error); msg.textContent = 'Não consegui salvar agora. Tente de novo depois.'; return; }
-  const o = document.getElementById('senha-ov'); if(o) o.remove();
+  if(error){ console.error('[banco] redefinir senha', error); msg.textContent = 'Não consegui salvar agora. Tente de novo.'; return; }
+  const o = document.getElementById('redefinir-ov'); if(o) o.remove();
+  await conectar();
 }
 
 /* ============================================================
    CONECTAR — vincula a conta à equipe e troca a fonte dos dados
    ============================================================ */
-async function conectar(viaCodigo){
+async function conectar(){
   const { data, error } = await sbc.rpc('vincular_meu_acesso');
   if(error){
     avisoDB('a conexão'); await sbc.auth.signOut(); return;
   }
-  if(!data){
-    /* e-mail novo, sem equipe em nenhuma instituição: antes disso era beco
-       sem saída (alerta + logout). Agora oferece criar a instituição na
-       hora — self-service, igual ao que o site já promete. */
-    mostrarCriarInstituicao(viaCodigo);
-    return;
+  if(data){ await entrarComVinculo(data); return; }
+
+  // sem vínculo: se veio de um cadastro completo cuja confirmação de e-mail
+  // demorou (a pessoa clicou no link de confirmação minutos ou dias depois
+  // do formulário), os dados do cadastro ficaram guardados no metadata da
+  // própria conta desde o signUp — finaliza a criação da instituição agora,
+  // sem pedir pra preencher tudo de novo.
+  const { data: userData } = await sbc.auth.getUser();
+  const meta = (userData && userData.user && userData.user.user_metadata) || {};
+  if(meta.tipo_pessoa){
+    const { data: inst, error: instErr } = await sbc.rpc('criar_instituicao_completa');
+    if(!instErr && inst){ await entrarComVinculo(inst); return; }
+    console.error('[banco] criar instituição (retomada)', instErr);
   }
-  await entrarComVinculo(data, viaCodigo);
+  avisoDB('a conexão'); await sbc.auth.signOut();
 }
 
-async function entrarComVinculo(data, viaCodigo){
+async function entrarComVinculo(data){
   CONEXAO.eu = data; CONEXAO.orgId = data.instituicao_id;
   try{
     await carregarTudo();
@@ -200,10 +180,26 @@ async function entrarComVinculo(data, viaCodigo){
   const pt = P_DB2TELA[data.papel] || 'operador';
   SESSAO = { papel: pt, nome: data.nome, rotulo: ROTULO_PAPEL[pt] };
   document.querySelectorAll('.rodape-l button').forEach(b => {
-    if(b.textContent.trim() === 'Trocar' || b.textContent.trim() === 'Entrar') b.textContent = 'Sair';
-    b.onclick = trocarPapel;
+    if(b.id === 'bt-criar-conta'){ b.remove(); return; }
+    const t = b.textContent.trim();
+    if(t === 'Trocar' || t.includes('Entrar')){ b.textContent = 'Sair'; b.onclick = trocarPapel; }
   });
   identidade();
+
+  // checa se o teste de 7 dias venceu sem assinatura ativa — se sim, a
+  // instituição inteira fica travada na tela de assinar até alguém com
+  // permissão renovar. Ninguém perde dado nenhum: só o acesso fica preso.
+  let acesso = { bloqueado:false };
+  try{
+    const { data: a, error: eAcesso } = await sbc.rpc('meu_acesso');
+    if(!eAcesso && a) acesso = a;
+  }catch(e){ console.error('[banco] acesso', e); }
+  ACESSO = acesso;
+
+  if(ACESSO.bloqueado){
+    abrirInstituicao('plano');
+    return;
+  }
   // veio de um card de plano no site (360social.com.br/#planos) — abre já
   // na aba de assinatura com o plano certo destacado, em vez de largar a
   // pessoa no painel geral pra ela ter que descobrir sozinha onde assina.
@@ -213,73 +209,125 @@ async function entrarComVinculo(data, viaCodigo){
   } else {
     irMenu(inicioDoPapel());
   }
-  // quem entrou por código (sem senha) ganha o convite pra definir uma — só
-  // uma vez por sessão, nunca obrigatório, login por código continua igual.
-  if(viaCodigo) setTimeout(oferecerDefinirSenha, 900);
 }
 
 /* ============================================================
-   CRIAR MINHA INSTITUIÇÃO — cadastro self-service (01/08/2026).
-   Aparece quando o e-mail que acabou de confirmar o código não está em
-   nenhuma equipe: antes disso era beco sem saída (site prometia "crie a
-   conta da sua instituição", app só sabia dizer "peça pra te adicionarem").
+   CRIAR CONTA — cadastro completo PJ/PF (01/08/2026). Porta de entrada
+   única de cliente novo: sem código por e-mail, sem "só olhar a
+   demonstração" — o teste de sete dias grátis É a demonstração.
    ============================================================ */
-function mostrarCriarInstituicao(){
-  // hoje só se chega aqui vindo do fluxo por código (signInWithOtp cria a
-  // conta na hora) — por isso oferece definir senha ao final, sempre.
-  fecharCriarInstituicao();
-  const o = document.createElement('div'); o.id = 'criar-inst-ov';
+let CC_TIPO = 'pj';
+function abrirCadastroCompleto(){
+  fecharCadastroCompleto(); fecharEntrar();
+  const o = document.createElement('div'); o.id = 'cad-completo-ov';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
-    + 'display:flex;align-items:center;justify-content:center;padding:18px';
+    + 'display:flex;align-items:flex-start;justify-content:center;padding:18px;overflow-y:auto';
   const p = (typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO && typeof PLANOS_INST !== 'undefined') ? PLANOS_INST[PLANO_ALVO] : null;
   const notaPlano = p ? `<div style="background:#fff1e6;border:1px solid #f2c99b;border-radius:10px;
       padding:9px 12px;margin-bottom:14px;font-size:13px;color:#8f3907">Plano escolhido:
-      <b>${p.nome}</b> — R$ ${p.preco}/mês. Depois de criar, já te levamos direto pra assinar.</div>` : '';
-  o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:400px;width:100%">
-    <h2 style="margin:0 0 6px;font-size:19px">Este e-mail ainda não está em nenhuma instituição</h2>
+      <b>${p.nome}</b> — R$ ${p.preco}/mês. Depois de criar sua conta, já te levamos direto pra assinar.</div>` : '';
+  o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:440px;width:100%;margin:24px 0">
+    <h2 style="margin:0 0 6px;font-size:19px">Criar minha conta</h2>
     ${notaPlano}
-    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Se você já faz parte de uma instituição no
-      360social, peça a quem coordena para te adicionar em Instituição → Equipe e acessos. Se é a
-      primeira vez, crie a instituição agora — sete dias grátis, sem cartão.</p>
-    <label style="font-size:13px;color:#6b625a">Nome da instituição</label>
-    <input id="ci-inst" placeholder="Ex.: Projeto Social Cidade Melhor" autocomplete="organization"
+    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Sete dias grátis pra testar de verdade,
+      sem cartão. Depois do teste, é só assinar pra continuar — sem perder nada do que já foi feito.</p>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button type="button" id="cc-tipo-pj" onclick="ccEscolherTipo('pj')" class="bt" style="flex:1">Pessoa jurídica</button>
+      <button type="button" id="cc-tipo-pf" onclick="ccEscolherTipo('pf')" class="bt g" style="flex:1">Pessoa física</button>
+    </div>
+    <label style="font-size:13px;color:#6b625a" id="cc-doc-label">CNPJ</label>
+    <input id="cc-documento" placeholder="Só números" inputmode="numeric"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
-    <label style="font-size:13px;color:#6b625a">Seu nome</label>
-    <input id="ci-nome" placeholder="Como você quer ser chamado" autocomplete="name"
+    <label style="font-size:13px;color:#6b625a" id="cc-nome-inst-label">Nome da instituição</label>
+    <input id="cc-nome-inst" placeholder="Ex.: Projeto Social Cidade Melhor" autocomplete="organization"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
-    <label style="font-size:13px;color:#6b625a">Cidade <span style="opacity:.6">— opcional</span></label>
-    <input id="ci-cidade" placeholder="Ex.: Itajaí — SC"
+    <label style="font-size:13px;color:#6b625a">Seu nome completo</label>
+    <input id="cc-nome-pessoa" placeholder="Nome do responsável" autocomplete="name"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">Telefone / WhatsApp</label>
+    <input id="cc-telefone" placeholder="(DD) 9 9999-9999" autocomplete="tel"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">Cidade</label>
+    <input id="cc-cidade" placeholder="Ex.: Itajaí — SC"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">Endereço <span style="opacity:.6">— opcional</span></label>
+    <input id="cc-endereco" placeholder="Rua, número, bairro"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">E-mail</label>
+    <input id="cc-email" type="email" placeholder="seu@email.com" autocomplete="email"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
+    <label style="font-size:13px;color:#6b625a">Senha</label>
+    <input id="cc-senha" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 14px;box-sizing:border-box">
-    <button onclick="confirmarCriarInstituicao()" class="bt" style="width:100%">Criar minha instituição</button>
-    <div id="ci-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
-    <button onclick="cancelarCriarInstituicao()" style="margin-top:14px;background:none;border:none;color:#6b625a;
-      font-size:13px;cursor:pointer;text-decoration:underline">Sair</button>
+    <button onclick="confirmarCadastroCompleto()" class="bt" style="width:100%">Criar conta e começar meu teste</button>
+    <div id="cc-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
+    <button onclick="fecharCadastroCompleto();abrirEntrar()" style="margin-top:14px;background:none;border:none;color:#6b625a;
+      font-size:13px;cursor:pointer;text-decoration:underline">Já sou cliente — entrar</button>
   </div>`;
   document.body.appendChild(o);
-  setTimeout(() => { const e = document.getElementById('ci-inst'); if(e) e.focus(); }, 60);
+  CC_TIPO = 'pj';
+  setTimeout(() => { const e = document.getElementById('cc-documento'); if(e) e.focus(); }, 60);
 }
-function fecharCriarInstituicao(){ const o = document.getElementById('criar-inst-ov'); if(o) o.remove(); }
-async function confirmarCriarInstituicao(){
-  const inst = (document.getElementById('ci-inst').value || '').trim();
-  const nome = (document.getElementById('ci-nome').value || '').trim();
-  const cidade = (document.getElementById('ci-cidade').value || '').trim();
-  const msg = document.getElementById('ci-msg');
-  if(!inst){ msg.textContent = 'Dá um nome pra sua instituição.'; return; }
-  if(!nome){ msg.textContent = 'Falta o seu nome.'; return; }
-  msg.textContent = 'Criando…';
-  const { data, error } = await sbc.rpc('criar_minha_instituicao',
-    { p_nome_instituicao: inst, p_nome_pessoa: nome, p_cidade: cidade || null });
-  if(error || !data){
-    console.error('[banco] criar instituição', error);
-    msg.textContent = 'Não consegui criar agora. Tente de novo em instantes.';
+function fecharCadastroCompleto(){ const o = document.getElementById('cad-completo-ov'); if(o) o.remove(); }
+function ccEscolherTipo(t){
+  CC_TIPO = t;
+  const bpj = document.getElementById('cc-tipo-pj'), bpf = document.getElementById('cc-tipo-pf');
+  if(bpj) bpj.className = 'bt' + (t==='pj' ? '' : ' g');
+  if(bpf) bpf.className = 'bt' + (t==='pf' ? '' : ' g');
+  const dl = document.getElementById('cc-doc-label'); if(dl) dl.textContent = t==='pj' ? 'CNPJ' : 'CPF';
+  const nl = document.getElementById('cc-nome-inst-label');
+  if(nl) nl.textContent = t==='pj' ? 'Nome da instituição' : 'Nome do projeto ou iniciativa';
+}
+async function confirmarCadastroCompleto(){
+  const doc = (document.getElementById('cc-documento').value || '').trim();
+  const nomeInst = (document.getElementById('cc-nome-inst').value || '').trim();
+  const nomePessoa = (document.getElementById('cc-nome-pessoa').value || '').trim();
+  const telefone = (document.getElementById('cc-telefone').value || '').trim();
+  const cidade = (document.getElementById('cc-cidade').value || '').trim();
+  const endereco = (document.getElementById('cc-endereco').value || '').trim();
+  const email = (document.getElementById('cc-email').value || '').trim().toLowerCase();
+  const senha = document.getElementById('cc-senha').value || '';
+  const msg = document.getElementById('cc-msg');
+  const docDigitos = doc.replace(/\D/g, '');
+
+  if(CC_TIPO === 'pj' && docDigitos.length !== 14){ msg.textContent = 'CNPJ precisa ter 14 dígitos.'; return; }
+  if(CC_TIPO === 'pf' && docDigitos.length !== 11){ msg.textContent = 'CPF precisa ter 11 dígitos.'; return; }
+  if(!nomeInst){ msg.textContent = 'Dá um nome pra sua instituição ou projeto.'; return; }
+  if(!nomePessoa){ msg.textContent = 'Falta o seu nome completo.'; return; }
+  if(!email.includes('@')){ msg.textContent = 'Confira o e-mail.'; return; }
+  if(senha.length < 6){ msg.textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
+
+  msg.textContent = 'Criando sua conta…';
+  const { data: signData, error: signErr } = await sbc.auth.signUp({
+    email, password: senha,
+    options: { data: {
+      tipo_pessoa: CC_TIPO, documento: docDigitos, nome_instituicao: nomeInst,
+      nome_pessoa: nomePessoa, telefone, cidade, endereco
+    } }
+  });
+  if(signErr){
+    console.error('[banco] signUp', signErr);
+    msg.textContent = (signErr.message || '').toLowerCase().includes('already registered')
+      ? 'Este e-mail já tem conta — use "Já sou cliente, entrar".'
+      : 'Não consegui criar a conta agora. Confira os dados e tente de novo.';
     return;
   }
-  fecharCriarInstituicao();
-  await entrarComVinculo(data, true);
-}
-async function cancelarCriarInstituicao(){
-  fecharCriarInstituicao();
-  await sbc.auth.signOut();
+  if(!signData.session){
+    // projeto exige confirmação de e-mail: os dados já estão salvos na
+    // conta (metadata) — conectar() finaliza a instituição sozinho assim
+    // que a pessoa voltar autenticada pelo link.
+    msg.textContent = 'Quase lá! Te mandamos um e-mail de confirmação — clique no link pra começar seu teste de 7 dias.';
+    return;
+  }
+  msg.textContent = 'Preparando sua instituição…';
+  const { data, error } = await sbc.rpc('criar_instituicao_completa');
+  if(error || !data){
+    console.error('[banco] criar instituição', error);
+    msg.textContent = 'Sua conta foi criada, mas não consegui preparar a instituição agora. Feche e entre de novo em instantes — sua conta e senha já funcionam.';
+    return;
+  }
+  fecharCadastroCompleto();
+  await entrarComVinculo(data);
 }
 
 function nomeDe(eqId){
@@ -871,6 +919,12 @@ function esperarPlanoInstituicao(bloqueado, url){
   }, 4000);
 }
 
+/* link de "esqueci minha senha" volta pra cá com esse evento — único jeito
+   de recuperar acesso agora que não existe mais código por e-mail. */
+sbc.auth.onAuthStateChange((event) => {
+  if(event === 'PASSWORD_RECOVERY') abrirRedefinirSenha();
+});
+
 /* ---- arranque: sessão guardada entra sozinha; visita vê a demo ---- */
 (async () => {
   try{
@@ -879,14 +933,18 @@ function esperarPlanoInstituicao(bloqueado, url){
   }catch(e){ console.error('[banco] sessão', e); }
   const rod = document.querySelector('.rodape-l');
   if(rod && !document.getElementById('bt-entrar')){
-    const b = document.createElement('button');
-    b.id = 'bt-entrar'; b.textContent = 'Entrar'; b.onclick = abrirEntrar;
-    rod.appendChild(b);
+    const b1 = document.createElement('button');
+    b1.id = 'bt-entrar'; b1.textContent = 'Entrar'; b1.title = 'Já sou cliente'; b1.onclick = abrirEntrar;
+    const b2 = document.createElement('button');
+    b2.id = 'bt-criar-conta'; b2.textContent = 'Criar conta'; b2.title = 'Quero começar — 7 dias grátis';
+    b2.style.cssText = 'background:var(--lar);color:#fff;border-color:var(--lar)';
+    b2.onclick = abrirCadastroCompleto;
+    rod.appendChild(b1); rod.appendChild(b2);
   }
   // veio de um card de plano no site (?plano=...) e não tem sessão salva:
-  // sem isso a pessoa cai na demonstração de sempre, sem nada na tela
-  // indicando que o clique em "Testar 7 dias grátis" fez alguma diferença
-  // — abre o Entrar/criar instituição na hora, já com o plano escolhido
-  // mostrado ali dentro.
-  if(typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO) abrirEntrar();
+  // quem clica em "Testar 7 dias grátis" a partir de um plano específico é,
+  // na esmagadora maioria, gente nova — manda direto pro cadastro completo
+  // (com "já sou cliente" como link secundário lá dentro), em vez de abrir
+  // a tela de login e a pessoa achar que precisa já ter conta.
+  if(typeof PLANO_ALVO !== 'undefined' && PLANO_ALVO) abrirCadastroCompleto();
 })();

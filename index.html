@@ -1540,6 +1540,14 @@ const TITULOS = {
 
 function inicioDoPapel(){ return PAPEIS[SESSAO.papel].inicio; }
 function ir(t, opts){
+  // teste de 7 dias vencido sem assinatura ativa (01/08/2026): trava
+  // qualquer navegação fora da aba de assinar — ponto único de bloqueio,
+  // vale pra menu, atalho ou o que for, sem precisar duplicar a checagem
+  // em cada botão.
+  if(typeof ACESSO !== 'undefined' && ACESSO && ACESSO.bloqueado && t !== 'org'){
+    if(typeof abrirInstituicao === 'function') abrirInstituicao('plano');
+    return;
+  }
   tela = t;
   document.querySelectorAll('.tela').forEach(e => e.classList.remove('on'));
   const el = $('t-'+t); if(el) el.classList.add('on');
@@ -1758,8 +1766,10 @@ function capturar(){
    ============================================================ */
 let abaOrg = 'identidade';
 function abrirInstituicao(qual){
+  const bloqueado = typeof ACESSO !== 'undefined' && ACESSO && ACESSO.bloqueado;
+  if(bloqueado) qual = 'plano';
   if(qual) abaOrg = qual;
-  const abas = [['identidade','Identidade'],['dados','Dados institucionais'],
+  const abas = bloqueado ? [['plano','Plano e assinatura']] : [['identidade','Identidade'],['dados','Dados institucionais'],
                 ['locais','Locais'],['servicos','Serviços'],
                 ['equipe','Equipe e acessos'],['email','Envios por e-mail'],
                 ['plano','Plano e assinatura'],['auditoria','Auditoria']];
@@ -1781,15 +1791,21 @@ function abrirInstituicao(qual){
 }
 function blocoPlano(){
   const statusTxt = STATUS_PLANO_INST_L[PLANO.status];
+  const bloqueado = typeof ACESSO !== 'undefined' && ACESSO && ACESSO.bloqueado;
+  const podeAssinar = !bloqueado || (ACESSO && ACESSO.pode_assinar !== false);
   return `<div id="plano-tela"><div class="pn"><div class="ph"><h2>Plano de assinatura da instituição</h2></div><div class="cx">
-    <div class="nota">Cobrança mensal recorrente no cartão, via Mercado Pago. Sete dias grátis, sem
-      cartão, pra começar — depois disso é só assinar o plano que couber no tamanho de vocês.</div>
+    ${bloqueado ? `<div class="nota" style="background:#fff1e6;border:1px solid #f2c99b;color:#8f3907;font-weight:600">
+        Seu teste de 7 dias terminou. ${podeAssinar
+          ? 'Assine um plano abaixo para continuar usando o 360social — nada do que sua equipe já cadastrou foi perdido.'
+          : 'Peça para quem coordena a instituição assinar um plano para continuar usando o 360social — nada do que já foi cadastrado foi perdido.'}</div>`
+      : `<div class="nota">Cobrança mensal recorrente no cartão, via Mercado Pago. Sete dias grátis, sem
+      cartão, pra começar — depois disso é só assinar o plano que couber no tamanho de vocês.</div>`}
     ${!CONEXAO.ligada ? `<div class="nota" style="margin-top:12px">No modo de demonstração isso é só
       vitrine — entre com o e-mail da sua equipe pra assinar de verdade.</div>` : ''}
     ${PLANO.plano ? `<div class="et" style="display:inline-block;margin:12px 0">
         ${esc(PLANOS_INST[PLANO.plano]?.nome||PLANO.plano)} — ${esc(statusTxt||PLANO.status)}
         ${PLANO.ativa_ate ? ' · válido até '+new Date(PLANO.ativa_ate).toLocaleDateString('pt-BR') : ''}</div>` : ''}
-    <div id="plano-opcoes" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
+    ${podeAssinar ? `<div id="plano-opcoes" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
       ${Object.entries(PLANOS_INST).map(([k,v]) => `<div class="pn" id="plano-card-${k}" style="flex:1;min-width:220px;margin:0
           ${PLANO_ALVO===k ? ';border-color:var(--lar);box-shadow:0 0 0 3px rgba(242,106,27,.15)' : ''}">
         <div class="cx">
@@ -1802,7 +1818,7 @@ function blocoPlano(){
             onclick="assinarPlanoInstituicao('${k}')">
             ${PLANO.plano===k && PLANO.status==='ativa' ? 'Plano atual' : 'Assinar'}</button>
         </div></div>`).join('')}
-    </div>
+    </div>` : ''}
     <div id="m-plano" style="margin-top:12px;font-size:13px;color:var(--tx3)"></div>
   </div></div></div>`;
 }
@@ -3683,5 +3699,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=3"></script>
+<script src="ponte-banco.js?v=4"></script>
 </body></html>
