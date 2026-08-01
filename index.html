@@ -881,6 +881,24 @@ const ORG = {
 };
 
 /* ------------------------------------------------------------
+   Plano e assinatura (01/08/2026) — cobrança mensal recorrente da
+   instituição no Mercado Pago. No modo de demonstração isso é só vitrine
+   (não tem cartão nenhum pra cobrar); ponte-banco.js troca a fonte por
+   PLANO.status/plano de verdade quando há sessão real, do mesmo jeito que
+   troca ORG e EMAIL.
+   ------------------------------------------------------------ */
+const PLANOS_INST = {
+  inicio:  { nome:'Início',  preco:149, pessoas:100,  desc:'Para quem está começando a organizar o atendimento.' },
+  impacto: { nome:'Impacto', preco:199, pessoas:500,  desc:'Mais de um serviço e mantenedores para prestar contas.' },
+  rede:    { nome:'Rede',    preco:299, pessoas:1000, desc:'Redes e instituições com prestação de contas ao poder público.' },
+};
+const STATUS_PLANO_INST_L = {
+  ativa:'✅ ativo', pendente:'⏳ aguardando confirmação do pagamento',
+  atrasada:'⚠️ pagamento atrasado', cancelada:'⛔ cancelado', sem_assinatura:null,
+};
+const PLANO = { plano:null, status:'sem_assinatura', ativa_ate:null };
+
+/* ------------------------------------------------------------
    Envios por e-mail
    Duas regras que não se negociam e por isso moram no código, não
    numa caixinha que alguém pode desmarcar sem pensar:
@@ -1733,7 +1751,7 @@ function abrirInstituicao(qual){
   const abas = [['identidade','Identidade'],['dados','Dados institucionais'],
                 ['locais','Locais'],['servicos','Serviços'],
                 ['equipe','Equipe e acessos'],['email','Envios por e-mail'],
-                ['auditoria','Auditoria']];
+                ['plano','Plano e assinatura'],['auditoria','Auditoria']];
   const barra = `<div class="pn" style="padding:0;overflow-x:auto"><div style="display:flex">
     ${abas.map(([k,r]) => `<button onclick="abrirInstituicao('${k}')" style="background:none;border:0;
       border-bottom:2.5px solid ${abaOrg===k?'var(--lar)':'transparent'};cursor:pointer;
@@ -1745,8 +1763,35 @@ function abrirInstituicao(qual){
     abaOrg === 'locais'     ? blocoLocais()     :
     abaOrg === 'servicos'   ? blocoServicos()   :
     abaOrg === 'equipe'     ? blocoEquipe()     :
+    abaOrg === 'plano'      ? blocoPlano()      :
     abaOrg === 'auditoria'  ? blocoAuditoria()  : blocoEmail());
+  if(abaOrg === 'plano' && CONEXAO.ligada && typeof carregarPlano === 'function') carregarPlano();
   ir('org', { titulo:'Instituição', sub:'Identidade, dados institucionais, locais, serviços e envios por e-mail.' });
+}
+function blocoPlano(){
+  const statusTxt = STATUS_PLANO_INST_L[PLANO.status];
+  return `<div id="plano-tela"><div class="pn"><div class="ph"><h2>Plano de assinatura da instituição</h2></div><div class="cx">
+    <div class="nota">Cobrança mensal recorrente no cartão, via Mercado Pago. Sete dias grátis, sem
+      cartão, pra começar — depois disso é só assinar o plano que couber no tamanho de vocês.</div>
+    ${!CONEXAO.ligada ? `<div class="nota" style="margin-top:12px">No modo de demonstração isso é só
+      vitrine — entre com o e-mail da sua equipe pra assinar de verdade.</div>` : ''}
+    ${PLANO.plano ? `<div class="et" style="display:inline-block;margin:12px 0">
+        ${esc(PLANOS_INST[PLANO.plano]?.nome||PLANO.plano)} — ${esc(statusTxt||PLANO.status)}
+        ${PLANO.ativa_ate ? ' · válido até '+new Date(PLANO.ativa_ate).toLocaleDateString('pt-BR') : ''}</div>` : ''}
+    <div id="plano-opcoes" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
+      ${Object.entries(PLANOS_INST).map(([k,v]) => `<div class="pn" style="flex:1;min-width:220px;margin:0">
+        <div class="cx">
+          <b style="font-size:14.5px">${esc(v.nome)}</b>
+          <div style="font-size:20px;font-weight:800;margin:6px 0 2px">R$ ${v.preco}<span style="font-size:12.5px;font-weight:600;color:var(--tx3)">/mês</span></div>
+          <div style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">Até ${v.pessoas} pessoas cadastradas</div>
+          <div style="font-size:12.5px;color:var(--tx3);margin-bottom:12px;line-height:1.5">${esc(v.desc)}</div>
+          <button class="bt larga" data-plano="${k}" ${!CONEXAO.ligada?'disabled':''}
+            onclick="assinarPlanoInstituicao('${k}')">
+            ${PLANO.plano===k && PLANO.status==='ativa' ? 'Plano atual' : 'Assinar'}</button>
+        </div></div>`).join('')}
+    </div>
+    <div id="m-plano" style="margin-top:12px;font-size:13px;color:var(--tx3)"></div>
+  </div></div></div>`;
 }
 function blocoIdentidade(){
   return `<div class="pn"><div class="ph"><h2>Logotipo</h2></div>

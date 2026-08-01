@@ -791,6 +791,61 @@ trocarPapel = function(){
   if(confirm('Sair da sua conta?')) sbc.auth.signOut().then(() => location.reload());
 };
 
+/* ============================================================
+   PLANO E ASSINATURA — cobrança mensal recorrente da instituição no
+   Mercado Pago (01/08/2026). Mesmo padrão do "plano da escola" já em
+   produção no MODOX: uma Edge Function cria o /preapproval e devolve o
+   link de checkout; o mp-webhook (compartilhado pelos dois produtos)
+   confirma o pagamento depois e ativa sozinho — esta tela só pergunta de
+   tempos em tempos se já ativou.
+   ============================================================ */
+async function carregarPlano(){
+  const { data, error } = await sbc.rpc('meu_plano_instituicao');
+  if(error){ console.error('[banco] plano', error); return; }
+  Object.assign(PLANO, { plano:data?.plano||null, status:data?.status||'sem_assinatura',
+    ativa_ate:data?.ativa_ate||null });
+  const el = document.getElementById('plano-tela');
+  if(el) el.outerHTML = blocoPlano();
+}
+async function assinarPlanoInstituicao(plano){
+  if(!CONEXAO.ligada) return;
+  const m = document.getElementById('m-plano');
+  if(m){ m.textContent = 'Abrindo pagamento…'; m.style.color = 'var(--tx3)'; }
+  document.querySelectorAll('#plano-opcoes button').forEach(b => b.disabled = true);
+  try{
+    const { data, error } = await sbc.functions.invoke('mp-assinatura-instituicao', { body: { plano } });
+    if(error) throw new Error(error.message || 'não consegui iniciar a assinatura');
+    if(!data?.init_point) throw new Error(data?.error || 'o Mercado Pago não devolveu o link de pagamento');
+    const aba = window.open(data.init_point, '_blank');
+    esperarPlanoInstituicao(!aba, data.init_point);
+  }catch(e){
+    document.querySelectorAll('#plano-opcoes button').forEach(b => b.disabled = false);
+    if(m){ m.textContent = 'Ops: ' + e.message; m.style.color = 'var(--rx, #b3261e)'; }
+  }
+}
+function esperarPlanoInstituicao(bloqueado, url){
+  const m = document.getElementById('m-plano'); if(!m) return;
+  m.style.color = 'var(--tx3)';
+  m.innerHTML = `${bloqueado ? `O navegador bloqueou a nova aba — <a href="${url}" target="_blank" rel="noopener">toque aqui para pagar</a>. ` : 'O pagamento abriu em outra aba. '}Esta tela avisa sozinha quando o Mercado Pago autorizar a assinatura.`;
+  let n = 0;
+  const timer = setInterval(async () => {
+    n++;
+    const { data: p } = await sbc.rpc('meu_plano_instituicao');
+    if(p?.status === 'ativa'){
+      clearInterval(timer);
+      Object.assign(PLANO, { plano:p.plano||null, status:p.status, ativa_ate:p.ativa_ate||null });
+      const el = document.getElementById('plano-tela');
+      if(el) el.outerHTML = blocoPlano();
+      return;
+    }
+    if(n > 150){ clearInterval(timer);
+      m.textContent = 'Ainda não veio a confirmação. Se você já autorizou no Mercado Pago, ela deve cair em instantes — pode fechar e reabrir esta tela depois.';
+      return;
+    }
+    m.textContent = n < 15 ? 'Verificando…' : 'Ainda verificando… (' + Math.floor(n * 4 / 60) + ' min)';
+  }, 4000);
+}
+
 /* ---- arranque: sessão guardada entra sozinha; visita vê a demo ---- */
 (async () => {
   try{
