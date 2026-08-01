@@ -177,12 +177,18 @@ async function entrarComVinculo(data){
     avisoDB('a carga dos dados'); return;
   }
   CONEXAO.ligada = true;
+  // sessão de verdade confirmada: some com a tela de boas-vindas (01/08/2026)
+  // — só existia pra cobrir o painel de demonstração até aqui.
+  const bv = document.getElementById('boas-vindas'); if(bv) bv.remove();
   const pt = P_DB2TELA[data.papel] || 'operador';
   SESSAO = { papel: pt, nome: data.nome, rotulo: ROTULO_PAPEL[pt] };
   document.querySelectorAll('.rodape-l button').forEach(b => {
-    if(b.id === 'bt-criar-conta'){ b.remove(); return; }
+    // bt-entrar e bt-criar-conta eram a porta de entrada; conectado, quem
+    // sai usa o botão "Trocar" de sempre (vira "Sair" abaixo) — sem os
+    // dois ficarem lado a lado dizendo "Sair" duas vezes.
+    if(b.id === 'bt-criar-conta' || b.id === 'bt-entrar'){ b.remove(); return; }
     const t = b.textContent.trim();
-    if(t === 'Trocar' || t.includes('Entrar')){ b.textContent = 'Sair'; b.onclick = trocarPapel; }
+    if(t === 'Trocar'){ b.textContent = 'Sair'; b.onclick = trocarPapel; }
   });
   identidade();
 
@@ -930,7 +936,10 @@ sbc.auth.onAuthStateChange((event) => {
   if(event === 'PASSWORD_RECOVERY') abrirRedefinirSenha();
 });
 
-/* ---- arranque: sessão guardada entra sozinha; visita vê a demo ---- */
+/* ---- arranque: sessão guardada entra sozinha; visita vê a tela de
+   boas-vindas (Entrar / Criar conta) — nunca a demonstração (01/08/2026),
+   que só continua existindo por baixo como esqueleto de tela, sem
+   aparecer pra ninguém até logar de verdade. ---- */
 (async () => {
   try{
     const { data:{ session } } = await sbc.auth.getSession();

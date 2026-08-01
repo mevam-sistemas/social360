@@ -528,6 +528,33 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
   <symbol id="i-agenda" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></g></symbol>
 </svg>
 
+<!-- Tela de boas-vindas (01/08/2026) — quem chega sem sessão vê isto, nunca
+     o painel de demonstração por trás. Cobre a tela inteira (z-index abaixo
+     só dos modais de Entrar/Criar conta, que abrem por cima dela) e some
+     assim que uma sessão de verdade é confirmada, em entrarComVinculo().
+     Sem essa tela, o cadastro/login abria com o painel fictício do SOS
+     Vida aparecendo desfocado atrás — confuso pra quem está chegando agora. -->
+<div id="boas-vindas" style="position:fixed;inset:0;z-index:9000;display:flex;
+  align-items:center;justify-content:center;padding:24px;
+  background:linear-gradient(160deg,#fff 0%,#fff7ef 55%,#ffe9d6 100%)">
+  <div style="max-width:400px;width:100%;text-align:center">
+    <svg width="56" height="56" style="margin-bottom:16px"><use href="#s360"/></svg>
+    <h1 style="margin:0 0 10px;font-size:24px;color:var(--tx)">360<i style="font-style:normal;font-weight:500;color:var(--tx3)">social</i></h1>
+    <p style="margin:0 0 26px;color:var(--tx3);font-size:14.5px;line-height:1.55">
+      Atendimento e impacto social num só lugar — pessoas, atendimentos,
+      doações e relatórios da sua instituição.
+    </p>
+    <button onclick="abrirCadastroCompleto()" class="bt gr"
+      style="width:100%;background:var(--lar);border-color:var(--lar)">Criar conta — 7 dias grátis</button>
+    <button onclick="abrirEntrar()" class="bt g" style="width:100%;margin-top:10px">Já sou cliente — Entrar</button>
+    <div style="margin-top:28px;font-size:12px;color:var(--tx4);display:flex;align-items:center;
+      justify-content:center;gap:6px">
+      <svg width="14" height="14"><use href="#s360"/></svg>
+      Arbor Labs · desenvolvido orgulhosamente no Brasil
+    </div>
+  </div>
+</div>
+
 <div class="app">
   <aside class="lado">
     <div class="cabec">
@@ -3699,5 +3726,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=5"></script>
+<script src="ponte-banco.js?v=6"></script>
 </body></html>
