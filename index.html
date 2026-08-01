@@ -1179,7 +1179,7 @@ const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], prese
       const q = new Date(dia0);
       const local = util
         ? (Math.random() < .72 ? LOCAIS[0] : sorteio(LOCAIS))
-        : sorteio([LOCAIS[2], LOCAIS[3]]);
+        : LOCAIS[2]; /* único local 'aberto' que sobrou depois de remover a SOS Vida Jovem (l3) */
       const h = local.id === 'l1' ? 8 + Math.floor(Math.random()*6) : 8 + Math.floor(Math.random()*11);
       q.setHours(h, Math.floor(Math.random()*60), 0, 0);
       if(d === 0 && q > agora) q.setHours(Math.max(8, agora.getHours()-1), Math.floor(Math.random()*60));
