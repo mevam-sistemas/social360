@@ -352,7 +352,7 @@ async function carregarTudo(){
     if(error) throw new Error(oQue + ': ' + error.message);
     return data || [];
   };
-  const [orgs, unis, srvs, eqp, fns, cfgsEmail, audit] = await Promise.all([
+  const [orgs, unis, srvs, eqp, fns, cfgsEmail, audit, emailsLog] = await Promise.all([
     pega(sbc.from('instituicoes').select('*').limit(1), 'instituição'),
     pega(sbc.from('unidades').select('*').order('nome'), 'unidades'),
     pega(sbc.from('servicos').select('*').order('ordem'), 'serviços'),
@@ -363,7 +363,13 @@ async function carregarTudo(){
        config_email logo acima: a política de segurança já filtra, então
        quem não pode configurar a instituição simplesmente recebe zero
        linhas aqui, sem erro. */
-    pega(sbc.from('auditoria').select('*').order('quando', { ascending:false }).limit(300), 'auditoria')
+    pega(sbc.from('auditoria').select('*').order('quando', { ascending:false }).limit(300), 'auditoria'),
+    /* emails_log: mesma regra de permissão de config_email/auditoria (RLS
+       exige pode('config_org') ou pode('relatorios')) — quem não pode,
+       recebe zero linhas, sem erro. Tela "Log de envios" dentro de
+       Envios por e-mail (ver blocoLogEmail() em index.html). */
+    pega(sbc.from('emails_log').select('*').eq('instituicao_id', CONEXAO.orgId)
+      .order('enviado_em', { ascending:false }).limit(100), 'log de envios')
   ]);
   const o = orgs[0] || {};
   Object.assign(ORG, { nome:o.nome||ORG.nome, nomeCompleto:o.nome_completo||'', cidade:o.cidade||'',
@@ -411,6 +417,11 @@ async function carregarTudo(){
   audit.forEach(a => BD.auditoria.push({ id:a.id, quando:new Date(a.quando),
     autor: nomeDe(a.autor_id) || 'Sistema', acao:a.acao, tabela:a.tabela,
     registroId:a.registro_id, detalhe:a.detalhe||null }));
+
+  BD.emailsLog.length = 0;
+  emailsLog.forEach(l => BD.emailsLog.push({ id:l.id, evento:l.evento,
+    destinatario_email:l.destinatario_email, destinatario_nome:l.destinatario_nome,
+    enviado_em:new Date(l.enviado_em), sucesso:l.sucesso, erro:l.erro||null }));
 
   const [pes, ats, prs, regs, pends, doas, fts, presEq, axs] = await Promise.all([
     pega(sbc.from('pessoas').select('*').order('criada_em', { ascending:false }), 'pessoas'),

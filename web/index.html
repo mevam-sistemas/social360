@@ -1129,7 +1129,7 @@ const ANEXOS_TIPO = ['RG (foto)','CPF (foto)','Comprovante de residência','Rece
    alguém usa a foto atual; o histórico existe para mostrar mudança ao
    longo do tempo, e para isso 360px bastam. Rosto muda — e ver essa
    mudança é, muitas vezes, ver o efeito do trabalho da instituição. */
-const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], presencas:[], fotos:[], presEquipe:[], auditoria:[] };
+const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], presencas:[], fotos:[], presEquipe:[], auditoria:[], emailsLog:[] };
 
 (function semear(){
   /* Retrato de demonstração: um campo de cor com as iniciais, desenhado no
@@ -2347,6 +2347,8 @@ function blocoEmail(){
     </div>`).join('')}
   </div>
 
+  ${blocoLogEmail()}
+
   <div class="pn"><div class="ph"><h2>O que nunca sai por e-mail</h2></div><div class="cx">
     <div class="nota rx">E-mail passa por servidores que não são nossos, fica em caixa de entrada
       aberta na tela de um celular e é encaminhado sem pensar. Por isso três coisas
@@ -2366,6 +2368,33 @@ function blocoEmail(){
     <div class="nota" style="margin-top:14px">Todo e-mail sai com link de gerenciar preferências
       e registra data, destinatário e evento no log de auditoria — inclusive as falhas de entrega.</div>
   </div></div>`;
+}
+function itemEmailLog(l){
+  const nomeEvento = (EMAIL.eventos.find(e => e.id === l.evento) || {}).nome || l.evento;
+  const cor = l.sucesso ? 'var(--ok, #2e8b57)' : 'var(--bad, #b3261e)';
+  return `<div class="dentro" style="cursor:default">
+    <div class="in" style="background:${cor};width:36px;height:36px;border-radius:50%;
+      display:grid;place-items:center;color:#fff;font-size:16px;flex:none">${l.sucesso?'✓':'!'}</div>
+    <div class="t"><b>${esc(nomeEvento)}</b> — ${esc(l.destinatario_nome || l.destinatario_email)}
+      <small>${dataCurta(l.enviado_em)} às ${hhmm(l.enviado_em)} · ${esc(l.destinatario_email)}${
+        l.sucesso ? '' : ' · falhou: ' + esc(l.erro || 'motivo não registrado')}</small></div>
+  </div>`;
+}
+function blocoLogEmail(){
+  const lista = BD.emailsLog || [];
+  return `<div class="pn"><div class="ph"><h2>Log de envios</h2><span class="sp"></span>
+      <span class="n">${lista.length}</span></div>
+    <div class="cx" style="padding-bottom:12px;border-bottom:1px solid var(--ln2)">
+      <div class="nota">Todo e-mail automático que saiu (ou tentou sair) desta instituição, direto do
+        banco de dados — inclusive as falhas de entrega. Mostra os últimos
+        ${Math.min(lista.length,100)||100} envios.</div>
+    </div>
+    ${lista.length ? lista.map(itemEmailLog).join('') : `<div class="nada">
+      <b>${CONEXAO.ligada ? 'Nada enviado ainda' : 'Sem dados nesta demonstração'}</b>
+      <p>${CONEXAO.ligada
+        ? 'Assim que o primeiro e-mail automático sair (ex.: o resumo diário), aparece aqui.'
+        : 'O log de envios vem direto do banco de dados de verdade — no modo de demonstração, que não grava nada, ele fica vazio mesmo.'}</p></div>`}
+  </div>`;
 }
 const ACAO_AUDITORIA = { insert:'criou', update:'alterou', delete:'removeu' };
 const TABELA_AUDITORIA = { pessoas:'Pessoa', atendimentos:'Atendimento',
@@ -3726,5 +3755,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=6"></script>
+<script src="ponte-banco.js?v=7"></script>
 </body></html>
