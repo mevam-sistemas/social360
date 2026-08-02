@@ -123,7 +123,8 @@ a{color:inherit}
 @media(max-width:920px){ .cab{padding:16px 16px 14px} }
 .cab .t{flex:1;min-width:200px}
 .cab h1{font-size:23px;font-weight:750;letter-spacing:-.03em;line-height:1.18}
-.cab .sub{font-size:13.5px;color:var(--tx3);margin-top:5px;line-height:1.5;max-width:72ch}
+.cab .sub{font-size:13.5px;color:var(--tx3);margin-top:5px;line-height:1.5;max-width:72ch;
+  text-align:justify;text-justify:inter-word;hyphens:auto;-webkit-hyphens:auto}
 .cab .acoes{display:flex;gap:9px;flex-wrap:wrap}
 .corpo{padding:22px 28px 130px;flex:1}
 @media(max-width:920px){ .corpo{padding:16px 16px 120px} }
@@ -338,7 +339,8 @@ img.in{object-fit:cover}
 /* ---------- etiquetas ---------- */
 .et{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
   border-radius:6px;padding:3px 8px;white-space:nowrap;border:1px solid var(--ln);
-  background:var(--b2);color:var(--tx3)}
+  background:var(--b2);color:var(--tx3);max-width:100%;min-width:0}
+.et .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .et.ok{background:var(--ok-fun);border-color:var(--ok-bd);color:var(--ok)}
 .et.av{background:var(--av-fun);border-color:var(--av-bd);color:var(--av)}
 .et.pg{background:var(--pg-fun);border-color:var(--pg-bd);color:var(--pg)}
@@ -369,6 +371,10 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--lar);
 textarea{resize:vertical;line-height:1.55;min-height:88px}
 select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236E737D' stroke-width='2.6' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
   background-repeat:no-repeat;background-position:right 13px center;padding-right:38px}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(46%) sepia(78%) saturate(1704%)
+  hue-rotate(360deg) brightness(101%) contrast(101%);cursor:pointer;opacity:.75}
+input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+.ajuda,.nota,p{text-align:justify;text-justify:inter-word;hyphens:auto;-webkit-hyphens:auto}
 .ajuda{font-size:12.5px;color:var(--tx3);margin-top:6px;line-height:1.5}
 .nota{font-size:13.5px;padding:12px 15px;border-radius:var(--r);border:1px solid var(--ln);
   background:var(--b2);color:var(--tx2);line-height:1.55}
@@ -509,6 +515,14 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
   gap:12px;padding:0 12px}
 .faixa b{color:#fff}
 @media(max-width:920px){ .faixa{display:none} }
+
+/* ---------- confirmação (troca o confirm() nativo do navegador) ---------- */
+.cfm-ovl{position:fixed;inset:0;z-index:500;background:rgba(15,17,20,.5);display:none;
+  align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px)}
+.cfm-ovl.on{display:flex}
+.cfm-ovl .pn{max-width:380px;width:100%;box-shadow:var(--sh3)}
+.cfm-ovl p{font-size:13.5px;color:var(--tx2);line-height:1.6;margin:0}
 </style>
 </head>
 <body>
@@ -526,7 +540,22 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
   <symbol id="i-graf" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V6M17 20v-9"/></g></symbol>
   <symbol id="i-caixa" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 8.5L12 4.5l8.5 4v7L12 19.5 3.5 15.5z"/><path d="M3.5 8.5L12 12.5l8.5-4M12 12.5v7"/></g></symbol>
   <symbol id="i-agenda" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></g></symbol>
+  <symbol id="i-relogio" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></g></symbol>
+  <symbol id="i-alerta" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 4.2 2.8 18a1.8 1.8 0 001.6 2.7h15.2a1.8 1.8 0 001.6-2.7L13.4 4.2a1.8 1.8 0 00-2.8 0z"/><path d="M12 9.8v4M12 17h.01"/></g></symbol>
+  <symbol id="i-bloqueado" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6.5 6.5l11 11"/></g></symbol>
 </svg>
+
+<div id="cfm-ovl" class="cfm-ovl" onclick="if(event.target===this)fecharConfirmar()">
+  <div class="pn"><div class="ph"><h2 id="cfm-titulo">Confirmar</h2></div>
+    <div class="cx">
+      <p id="cfm-corpo"></p>
+      <div style="display:flex;gap:9px;margin-top:18px;justify-content:flex-end">
+        <button class="bt g" onclick="fecharConfirmar()">Cancelar</button>
+        <button class="bt" id="cfm-bt" onclick="executarConfirmar()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Tela de boas-vindas (01/08/2026) — quem chega sem sessão vê isto, nunca
      o painel de demonstração por trás. Cobre a tela inteira (z-index abaixo
@@ -884,6 +913,20 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
    ============================================================ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Confirmação própria do app, no lugar do confirm() nativo do navegador
+   (aquela caixinha cinza do sistema operacional, fora do visual do 360social). */
+let CFM_CB = null;
+function confirmarAcao(titulo, corpo, textoBotao, cor, cb){
+  CFM_CB = cb;
+  $('cfm-titulo').textContent = titulo;
+  $('cfm-corpo').textContent = corpo;
+  const bt = $('cfm-bt');
+  bt.textContent = textoBotao || 'Confirmar';
+  bt.className = 'bt' + (cor ? ' '+cor : '');
+  $('cfm-ovl').classList.add('on');
+}
+function fecharConfirmar(){ $('cfm-ovl').classList.remove('on'); CFM_CB = null; }
+function executarConfirmar(){ const cb = CFM_CB; fecharConfirmar(); if(cb) cb(); }
 const agora = new Date();
 const iso = d => new Date(d).toISOString().slice(0,10);
 const hhmm = d => String(new Date(d).getHours()).padStart(2,'0')+':'+String(new Date(d).getMinutes()).padStart(2,'0');
@@ -920,9 +963,10 @@ const PLANOS_INST = {
   rede:    { nome:'Rede',    preco:299, pessoas:1000, desc:'Redes e instituições com prestação de contas ao poder público.' },
 };
 const STATUS_PLANO_INST_L = {
-  ativa:'✅ ativo', pendente:'⏳ aguardando confirmação do pagamento',
-  atrasada:'⚠️ pagamento atrasado', cancelada:'⛔ cancelado', sem_assinatura:null,
+  ativa:'ativo', pendente:'aguardando confirmação do pagamento',
+  atrasada:'pagamento atrasado', cancelada:'cancelado', sem_assinatura:null,
 };
+const STATUS_PLANO_INST_ICO = { ativa:'i-ok', pendente:'i-relogio', atrasada:'i-alerta', cancelada:'i-bloqueado' };
 const PLANO = { plano:null, status:'sem_assinatura', ativa_ate:null };
 /* Plano escolhido no site (360social.com.br/#planos → ?plano=inicio|impacto|rede),
    lido uma única vez na carga. Serve pra, assim que a pessoa entrar (seja
@@ -1829,9 +1873,10 @@ function blocoPlano(){
       cartão, pra começar — depois disso é só assinar o plano que couber no tamanho de vocês.</div>`}
     ${!CONEXAO.ligada ? `<div class="nota" style="margin-top:12px">No modo de demonstração isso é só
       vitrine — entre com o e-mail da sua equipe pra assinar de verdade.</div>` : ''}
-    ${PLANO.plano ? `<div class="et" style="display:inline-block;margin:12px 0">
-        ${esc(PLANOS_INST[PLANO.plano]?.nome||PLANO.plano)} — ${esc(statusTxt||PLANO.status)}
-        ${PLANO.ativa_ate ? ' · válido até '+new Date(PLANO.ativa_ate).toLocaleDateString('pt-BR') : ''}</div>` : ''}
+    ${PLANO.plano ? `<div class="et" style="margin:12px 0">
+        ${STATUS_PLANO_INST_ICO[PLANO.status]?`<svg width="13" height="13"><use href="#${STATUS_PLANO_INST_ICO[PLANO.status]}"/></svg>`:''}
+        <span>${esc(PLANOS_INST[PLANO.plano]?.nome||PLANO.plano)} — ${esc(statusTxt||PLANO.status)}
+        ${PLANO.ativa_ate ? ' · válido até '+new Date(PLANO.ativa_ate).toLocaleDateString('pt-BR') : ''}</span></div>` : ''}
     ${podeAssinar ? `<div id="plano-opcoes" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px">
       ${Object.entries(PLANOS_INST).map(([k,v]) => `<div class="pn" id="plano-card-${k}" style="flex:1;min-width:220px;margin:0
           ${PLANO_ALVO===k ? ';border-color:var(--lar);box-shadow:0 0 0 3px rgba(242,106,27,.15)' : ''}">
@@ -1840,7 +1885,7 @@ function blocoPlano(){
           <b style="font-size:14.5px">${esc(v.nome)}</b>
           <div style="font-size:20px;font-weight:800;margin:6px 0 2px">R$ ${v.preco}<span style="font-size:12.5px;font-weight:600;color:var(--tx3)">/mês</span></div>
           <div style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">Até ${v.pessoas} pessoas cadastradas</div>
-          <div style="font-size:12.5px;color:var(--tx3);margin-bottom:12px;line-height:1.5">${esc(v.desc)}</div>
+          <div style="font-size:12.5px;color:var(--tx3);margin-bottom:12px;line-height:1.5;text-align:justify;text-justify:inter-word;hyphens:auto">${esc(v.desc)}</div>
           <button class="bt larga" data-plano="${k}" ${!CONEXAO.ligada?'disabled':''}
             onclick="assinarPlanoInstituicao('${k}')">
             ${PLANO.plano===k && PLANO.status==='ativa' ? 'Plano atual' : 'Assinar'}</button>
@@ -1979,10 +2024,9 @@ function salvarLocal(lid){
 }
 function arquivarLocal(lid){
   const l = LOCAIS.find(x => x.id === lid); if(!l) return;
-  if(!confirm('Arquivar '+l.nome+'?\n\nEle some das opções novas, mas o histórico de atendimentos '
-    +'e presenças continua — nada é apagado.')) return;
-  l.ativa = false;
-  abrirInstituicao('locais');
+  confirmarAcao('Arquivar '+l.nome+'?',
+    'Ele some das opções novas, mas o histórico de atendimentos e presenças continua — nada é apagado.',
+    'Arquivar', 'g', () => { l.ativa = false; abrirInstituicao('locais'); });
 }
 function reativarLocal(lid){
   const l = LOCAIS.find(x => x.id === lid); if(!l) return;
@@ -2056,10 +2100,9 @@ function salvarServico(sid){
 }
 function arquivarServico(sid){
   const s = SERVICOS.find(x => x.id === sid); if(!s) return;
-  if(!confirm('Arquivar '+s.nome+'?\n\nEle some das opções novas de atendimento, mas o histórico '
-    +'de quem já recebeu continua — nada é apagado.')) return;
-  s.ativo = false;
-  abrirInstituicao('servicos');
+  confirmarAcao('Arquivar '+s.nome+'?',
+    'Ele some das opções novas de atendimento, mas o histórico de quem já recebeu continua — nada é apagado.',
+    'Arquivar', 'g', () => { s.ativo = false; abrirInstituicao('servicos'); });
 }
 function reativarServico(sid){
   const s = SERVICOS.find(x => x.id === sid); if(!s) return;
@@ -2308,10 +2351,9 @@ function reativarFuncao(fid){
 }
 function desligarEquipe(uid){
   const u = EQUIPE.find(x => x.id === uid); if(!u) return;
-  if(!confirm('Desligar '+u.nome+' da equipe?\n\nO acesso é encerrado agora. Os registros que '
-    +'essa pessoa fez continuam no prontuário, com o nome dela — nada é apagado.')) return;
-  u.status = 'inativo';
-  abrirInstituicao('equipe');
+  confirmarAcao('Desligar '+u.nome+' da equipe?',
+    'O acesso é encerrado agora. Os registros que essa pessoa fez continuam no prontuário, com o nome dela — nada é apagado.',
+    'Desligar', 'pg', () => { u.status = 'inativo'; abrirInstituicao('equipe'); });
 }
 function religarEquipe(uid){
   const u = EQUIPE.find(x => x.id === uid); if(!u) return;
@@ -2871,10 +2913,10 @@ function encerrarDia(localId){
   const dentro = dados.dentroAgora(localId).length;
   const dentroEq = dados.dentroAgoraEquipe(localId).length;
   const partes = [dentro+' presença(s) de pessoas atendidas'].concat(dentroEq ? [dentroEq+' da equipe'] : []);
-  if(!confirm('Encerrar o dia no '+l.curto+'?\n\n'+partes.join(' e ')+' em aberto vão ser fechadas agora, '+
-    'marcadas como "saída não registrada". O sistema não inventa horário de saída.')) return;
-  dados.encerrarLocal(localId);
-  montarPresenca(); menus();
+  confirmarAcao('Encerrar o dia no '+l.curto+'?',
+    partes.join(' e ')+' em aberto vão ser fechadas agora, marcadas como "saída não registrada". '+
+    'O sistema não inventa horário de saída.',
+    'Encerrar', 'g', () => { dados.encerrarLocal(localId); montarPresenca(); menus(); });
 }
 /* ---- histórico do local, com filtro de período ----
    Mesma tela de presença, em "modo histórico": junta pessoas atendidas e
@@ -2918,7 +2960,7 @@ function painelHistoricoLocal(l){
         const min = e.saida ? Math.round((e.saida - e.quando)/60000) : null;
         linha += `<div class="tl-it ${e.falta?'tec':''}"><div class="col"><div class="hr">${e.falta?'':hhmm(e.quando)}</div>
           <div class="tp">${e.falta?'Falta':'Equipe'}</div></div><div class="fio"></div><div class="txt">
-          <b>${esc(e.nome)} <span class="et az" style="margin-left:4px">${esc(e.rotulo)}</span></b>
+          <b>${esc(e.nome)} <span class="et az" style="margin-left:4px"><span class="tx">${esc(e.rotulo)}</span></span></b>
           ${e.falta ? '' : `<div class="sub">${e.saida
             ? 'saiu '+hhmm(e.saida)+' · permaneceu '+dur(min)+(e.encerradaAuto?' · saída não registrada':'')
             : 'ainda no local · até agora'}</div>`}
@@ -3524,7 +3566,7 @@ function linhaDoacaoHoje(d){
   const entrada = d.tipo === 'entrada';
   return `<div class="tl-it ${entrada?'pres':'tec'}"><div class="col"><div class="hr">${hhmm(d.quando)}</div>
     <div class="tp">${entrada?'Entrada':'Saída'}</div></div><div class="fio"></div><div class="txt">
-    <b>${esc(d.item)}</b> <span class="et ${entrada?'ok':'az'}" style="margin-left:4px">${d.qtd} ${esc(d.categoria||'')}</span>
+    <b>${esc(d.item)}</b> <span class="et ${entrada?'ok':'az'}" style="margin-left:4px"><span class="tx">${d.qtd} ${esc(d.categoria||'')}</span></span>
     <div class="sub">${entrada?'De':'Para'}: ${esc(d.quem)}${l?' · '+esc(l.curto):''}</div>
     ${d.observacao?`<div class="obs">${esc(d.observacao)}</div>`:''}
     ${d.anexos&&d.anexos.length?`<div class="anxs">${d.anexos.map(x=>

@@ -100,7 +100,8 @@ body:before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* lista de serviços */
 .lista{width:min(1100px,88vw);display:flex;flex-direction:column;gap:clamp(11px,1.5vh,22px);margin-top:1vh}
 .li{display:flex;align-items:center;gap:clamp(14px,1.6vw,26px)}
-.li .em{font-size:clamp(26px,3vw,52px);width:clamp(38px,4vw,70px);text-align:center;flex:none}
+.li .em{width:clamp(38px,4vw,70px);display:flex;align-items:center;justify-content:center;flex:none;color:var(--lar-luz)}
+.li .em svg{width:clamp(26px,3vw,52px);height:clamp(26px,3vw,52px)}
 .li .nm{font-size:clamp(17px,1.9vw,34px);font-weight:700;letter-spacing:-.02em;
   flex:none;width:clamp(150px,17vw,320px);text-align:left}
 .li .tr{flex:1;height:clamp(14px,1.7vh,26px);background:rgba(255,255,255,.07);
@@ -144,6 +145,15 @@ body:before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     <path d="M13.46,-50.23 A52,52 0 0 1 50.23,13.46 L38.64,10.35 A40,40 0 0 0 10.35,-38.64 Z M36.77,36.77 A52,52 0 0 1 -36.77,36.77 L-28.28,28.28 A40,40 0 0 0 28.28,28.28 Z M-50.23,13.46 A52,52 0 0 1 -13.46,-50.23 L-10.35,-38.64 A40,40 0 0 0 -38.64,10.35 Z" fill="#F26A1B"/>
     <circle cx="0" cy="0" r="16.64" fill="#F26A1B"/>
   </symbol>
+  <!-- Ícones de serviço do mural — trocam os emoji antigos (🍽️🚿✂️🧺👕🤝) por
+       um traço fino e monocromático, no mesmo espírito do resto da marca,
+       mas ainda grande e reconhecível de longe (é uma TV, não um botão). -->
+  <symbol id="i-refeicao" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5h16a8 8 0 0 1-8 8 8 8 0 0 1-8-8z"/><path d="M12 11.5V3.5"/><path d="M8.8 3.5a3.2 3.2 0 0 1 6.4 0"/></g></symbol>
+  <symbol id="i-banho" viewBox="0 0 24 24"><path d="M12 2.5S5.5 11 5.5 15.5a6.5 6.5 0 1 0 13 0C18.5 11 12 2.5 12 2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-tesoura" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.2" cy="6.2" r="2.7"/><circle cx="6.2" cy="17.8" r="2.7"/><path d="M20 4 8.4 15.6"/><path d="M14.7 14.4 20 20"/><path d="M8.4 8.4 12 12"/></g></symbol>
+  <symbol id="i-cesta" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10h15.6l-1.6 9.2a2 2 0 0 1-2 1.6H7.8a2 2 0 0 1-2-1.6z"/><path d="M8.2 10 9.3 5h5.4l1.1 5"/><path d="M9 14v3.4M12 14v3.4M15 14v3.4"/></g></symbol>
+  <symbol id="i-roupa" viewBox="0 0 24 24"><path d="M8.3 3 4.3 6l1.8 3 2.3-1.4V21h7V7.6L17.7 9l1.8-3-4-3-2.2 2h-3.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-acolhida" viewBox="0 0 24 24"><path d="M12 20.3S3.8 15.2 3.8 9.6C3.8 6.4 6 4.3 8.8 4.3c1.8 0 3.2 1 4.2 2.5C14 5.3 15.4 4.3 17.2 4.3c2.8 0 5 2.1 5 5.3 0 5.6-8.2 10.7-8.2 10.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
 </svg>
 
 <div class="cab">
@@ -177,12 +187,12 @@ const DADOS = {
   semana: { pessoas: 638 },
   mes:    { pessoas: 2140, atendimentos: 5384 },
   servicos: [
-    { em:'🍽️', nome:'Almoço', n:128 },
-    { em:'🚿', nome:'Banho', n:64 },
-    { em:'✂️', nome:'Corte de cabelo', n:31 },
-    { em:'🧺', nome:'Cesta básica', n:27 },
-    { em:'👕', nome:'Roupas', n:22 },
-    { em:'🤝', nome:'Atendimento social', n:18 }
+    { ic:'i-refeicao', nome:'Almoço', n:128 },
+    { ic:'i-banho', nome:'Banho', n:64 },
+    { ic:'i-tesoura', nome:'Corte de cabelo', n:31 },
+    { ic:'i-cesta', nome:'Cesta básica', n:27 },
+    { ic:'i-roupa', nome:'Roupas', n:22 },
+    { ic:'i-acolhida', nome:'Atendimento social', n:18 }
   ],
   evolucao: [58,74,81,66,92,104,38,29,88,97,84,101,119,142],
   doacoes: { entradas: 52, saidas: 41 }
@@ -235,7 +245,7 @@ const SLIDES = [
   () => `<div class="rot">Serviços de hoje</div>
     <div class="lista">${DADOS.servicos.map(s => {
       const max = Math.max(...DADOS.servicos.map(x => x.n));
-      return `<div class="li"><span class="em">${s.em}</span><span class="nm">${s.nome}</span>
+      return `<div class="li"><span class="em"><svg><use href="#${s.ic}"/></svg></span><span class="nm">${s.nome}</span>
         <span class="tr"><i style="width:${s.n/max*100}%"></i></span>
         <span class="n">${s.n}</span></div>`;
     }).join('')}</div>`,
