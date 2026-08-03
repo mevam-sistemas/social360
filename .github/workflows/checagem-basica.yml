@@ -1,0 +1,54 @@
+name: Checagem básica
+
+# Correção de auditoria de segurança (03/08/2026), item "nenhuma proteção
+# automatizada" — antes disso, qualquer coisa ia direto pra main sem nenhuma
+# checagem automática. Isso aqui é o mínimo: valida que o JS não tem erro de
+# sintaxe e avisa se algum segredo (token, service_role key etc.) foi
+# commitado sem querer. Não substitui revisão humana, mas pega os erros mais
+# óbvios antes de ir pro ar.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  checagem:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar sintaxe do JavaScript
+        run: |
+          set -e
+          erro=0
+          while IFS= read -r -d '' arquivo; do
+            echo "Checando: $arquivo"
+            node --check "$arquivo" || erro=1
+          done < <(find . -name '*.js' -not -path './node_modules/*' -print0)
+          exit $erro
+
+      - name: Procurar segredos óbvios commitados sem querer
+        run: |
+          set -e
+          # Padrões de chaves/tokens que nunca deveriam estar em texto puro no repo.
+          # sb_publishable_ é a chave pública do Supabase (ok, ver README) — não é checada aqui.
+          # web/supabase.min.js é a biblioteca oficial da Supabase (vendored) — o texto
+          # "service_role" aparece dentro dela como parte do próprio código da lib
+          # (checagem de papel), não é segredo nenhum, por isso fica de fora da busca.
+          padrao='sb_secret_|service_role|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}'
+          if grep -RInE "$padrao" \
+              --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github \
+              --exclude=supabase.min.js .; then
+            echo "::error::Possível segredo encontrado no código — veja as linhas acima antes de continuar."
+            exit 1
+          else
+            echo "Nada encontrado."
+          fi
