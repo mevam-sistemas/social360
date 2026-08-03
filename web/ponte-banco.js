@@ -473,10 +473,23 @@ async function carregarTudo(){
     const i=lista.indexOf(p.acao);
     if(p.permitido && i<0)lista.push(p.acao); else if(!p.permitido && i>=0)lista.splice(i,1);
   });
+  const caminhosFoto=[...new Set(pes.map(p=>p.foto_url).concat(fts.map(f=>f.url))
+    .filter(u=>u && !/^data:|^https?:/i.test(u)))];
+  const urlsFoto=new Map();
+  if(caminhosFoto.length){
+    const { data:assinadas, error:erroFotos }=await sbc.storage.from('fotos').createSignedUrls(caminhosFoto,3600);
+    if(erroFotos)console.error('[banco] assinar fotos',erroFotos);
+    (assinadas||[]).forEach(x=>{ if(x.signedUrl)urlsFoto.set(x.path,x.signedUrl); });
+  }
+  const urlFoto=u=>urlsFoto.get(u)||u||null;
   BD.pessoas.length = 0;
   pes.filter(p => !p.arquivada).forEach(p => BD.pessoas.push({ id:p.id, nome:p.nome,
     apelido:p.apelido||'', nasc:p.nascimento||'', tel:p.telefone||'', cpf:p.cpf||'', sexo:p.sexo||null,
-    codigo:p.codigo, foto:p.foto_url||null, criado:new Date(p.criada_em), obs:p.observacao||'', docs:[] }));
+    rg:p.rg||'', rgOrgao:p.rg_orgao||'', rgUf:p.rg_uf||'', semDocumentos:!!p.sem_documentos,
+    situacaoRua:p.situacao_rua, cep:p.cep||'', logradouro:p.logradouro||'', numero:p.numero||'',
+    complemento:p.complemento||'', bairro:p.bairro||'', cidade:p.cidade||'', estado:p.estado||'',
+    referenciaEndereco:p.referencia_endereco||'', codigo:p.codigo, foto:urlFoto(p.foto_url), fotoPath:p.foto_url||null,
+    criado:new Date(p.criada_em), obs:p.observacao||'', docs:[] }));
   BD.atend.length = 0;
   ats.forEach(a => {
     const quantidades = {};
@@ -506,7 +519,7 @@ async function carregarTudo(){
   locaisEstoque.forEach(l=>BD.locaisEstoque.push({id:l.id,nome:l.nome,descricao:l.descricao||'',ativo:l.ativo!==false}));
   obsDoacoes.forEach(o=>{ const d=BD.doacoes.find(x=>x.id===o.doacao_id); if(d)d.complementos.push({id:o.id,texto:o.texto,quem:nomeDe(o.criada_por),quando:new Date(o.criada_em)}); });
   BD.fotos.length = 0;
-  fts.forEach(f => BD.fotos.push({ id:f.id, pessoa:f.pessoa_id, url:f.url,
+  fts.forEach(f => BD.fotos.push({ id:f.id, pessoa:f.pessoa_id, url:urlFoto(f.url), path:f.url,
     quando:new Date(f.criada_em), quem:nomeDe(f.criada_por), motivo:f.motivo||'' }));
   BD.presEquipe.length = 0;
   presEq.forEach(p => BD.presEquipe.push({ id:p.id, equipe:p.equipe_id, local:p.unidade_id,
@@ -553,17 +566,37 @@ function proximoCodigo(){
   return prefixo + (maior + 1);
 }
 
-dados.criarPessoa = function(p){
+async function salvarArquivoFotoPessoa(dataUrl,pessoaId){
+  const caminho=`${CONEXAO.orgId}/${pessoaId}/perfil-${Date.now()}.webp`;
+  const arquivo=blobDeDataUrl(dataUrl);
+  const { error:envioErro }=await sbc.storage.from('fotos').upload(caminho,arquivo,
+    {contentType:'image/webp',cacheControl:'3600',upsert:false});
+  if(envioErro)throw new Error('Não foi possível enviar a foto: '+envioErro.message);
+  const { data, error }=await sbc.storage.from('fotos').createSignedUrl(caminho,3600);
+  if(error)throw new Error('A foto foi enviada, mas não pôde ser aberta.');
+  return {path:caminho,url:data.signedUrl};
+}
+
+dados.criarPessoa = async function(p){
   if(!CONEXAO.ligada) return demoDados.criarPessoa(p);
   const id = crypto.randomUUID();
   const novo = Object.assign({ id, codigo: proximoCodigo(), criado:new Date(),
-    apelido:'', nasc:'', tel:'', cpf:'', foto:null, obs:'', docs:[] }, p, { id });
+    apelido:'', nasc:'', tel:'', cpf:'', rg:'', rgOrgao:'', rgUf:'', semDocumentos:false,
+    situacaoRua:null, cep:'', logradouro:'', numero:'', complemento:'', bairro:'', cidade:'', estado:'',
+    referenciaEndereco:'', foto:null, fotoPath:null, obs:'', docs:[] }, p, { id });
   novo.codigo = novo.codigo || proximoCodigo();
-  BD.pessoas.unshift(novo);
-  pushDB(sbc.from('pessoas').insert({ id, instituicao_id:CONEXAO.orgId, codigo:novo.codigo,
+  if(novo.foto){ const salva=await salvarArquivoFotoPessoa(novo.foto,id); novo.foto=salva.url; novo.fotoPath=salva.path; }
+  const { error }=await sbc.from('pessoas').insert({ id, instituicao_id:CONEXAO.orgId, codigo:novo.codigo,
     nome:novo.nome, apelido:novo.apelido||null, nascimento:novo.nasc||null,
     telefone:novo.tel||null, cpf:novo.cpf||null, sexo:novo.sexo||null, observacao:novo.obs||null,
-    foto_url:novo.foto||null, criada_por:CONEXAO.eu.id }), 'o cadastro');
+    rg:novo.rg||null,rg_orgao:novo.rgOrgao||null,rg_uf:novo.rgUf||null,sem_documentos:!!novo.semDocumentos,
+    situacao_rua:novo.situacaoRua,cep:novo.cep||null,logradouro:novo.logradouro||null,numero:novo.numero||null,
+    complemento:novo.complemento||null,bairro:novo.bairro||null,cidade:novo.cidade||null,estado:novo.estado||null,
+    referencia_endereco:novo.referenciaEndereco||null,foto_url:novo.fotoPath||null, criada_por:CONEXAO.eu.id });
+  if(error)throw new Error('Não foi possível salvar o cadastro: '+error.message);
+  BD.pessoas.unshift(novo);
+  if(novo.fotoPath){ const f={id:crypto.randomUUID(),pessoa:id,url:novo.foto,path:novo.fotoPath,quando:new Date(),quem:SESSAO.nome,motivo:'Foto do cadastro inicial'};
+    BD.fotos.push(f); pushDB(sbc.from('fotos_pessoa').insert({id:f.id,instituicao_id:CONEXAO.orgId,pessoa_id:id,url:novo.fotoPath,motivo:f.motivo,criada_por:CONEXAO.eu.id}),'o histórico de foto'); }
   return novo;
 };
 
@@ -663,18 +696,18 @@ dados.sair = function(pessoaId, localId){
   return e;
 };
 
-dados.trocarFoto = function(pessoaId, url, motivo){
+dados.trocarFoto = async function(pessoaId, url, motivo){
   if(!CONEXAO.ligada) return demoDados.trocarFoto(pessoaId, url, motivo);
   const p = dados.pessoa(pessoaId); if(!p) return null;
+  const salva=await salvarArquivoFotoPessoa(url,pessoaId);
   const id = crypto.randomUUID();
-  const f = { id, pessoa:pessoaId, url, quando:new Date(), quem:SESSAO.nome,
+  const f = { id, pessoa:pessoaId, url:salva.url, path:salva.path, quando:new Date(), quem:SESSAO.nome,
     motivo: motivo || 'Atualização de foto' };
-  BD.fotos.push(f); p.foto = url;
+  const { error }=await sbc.from('pessoas').update({foto_url:salva.path}).eq('id',pessoaId).eq('instituicao_id',CONEXAO.orgId);
+  if(error)throw new Error('Não foi possível atualizar a foto: '+error.message);
+  BD.fotos.push(f); p.foto=salva.url; p.fotoPath=salva.path;
   pushDB(sbc.from('fotos_pessoa').insert({ id, instituicao_id:CONEXAO.orgId, pessoa_id:pessoaId,
-    url, motivo:f.motivo, criada_por:CONEXAO.eu.id }), 'o histórico de foto');
-  /* a foto em uso (resolução cheia) entra no cadastro logo depois,
-     quando quem chamou terminar de atribuir p.foto — por isso o respiro */
-  setTimeout(() => sincronizarPessoa(pessoaId), 600);
+    url:salva.path, motivo:f.motivo, criada_por:CONEXAO.eu.id }), 'o histórico de foto');
   return f;
 };
 
@@ -740,16 +773,20 @@ function sincronizarPessoa(pid){
   if(!CONEXAO.ligada) return;
   const p = dados.pessoa(pid); if(!p) return;
   pushDB(sbc.from('pessoas').update({ nome:p.nome, apelido:p.apelido||null, nascimento:p.nasc||null,
-    telefone:p.tel||null, cpf:p.cpf||null, sexo:p.sexo||null, observacao:p.obs||null, foto_url:p.foto||null })
+    telefone:p.tel||null, cpf:p.cpf||null, sexo:p.sexo||null, observacao:p.obs||null,
+    rg:p.rg||null,rg_orgao:p.rgOrgao||null,rg_uf:p.rgUf||null,sem_documentos:!!p.semDocumentos,
+    situacao_rua:p.situacaoRua,cep:p.cep||null,logradouro:p.logradouro||null,numero:p.numero||null,
+    complemento:p.complemento||null,bairro:p.bairro||null,cidade:p.cidade||null,estado:p.estado||null,
+    referencia_endereco:p.referenciaEndereco||null,foto_url:p.fotoPath||p.foto||null })
     .eq('id', pid).eq('instituicao_id', CONEXAO.orgId), 'a edição do cadastro');
 }
 
 /* ---- funções nomeadas que gravam direto ---- */
 const demoSalvarEdicao = salvarEdicao;
-salvarEdicao = function(){
+salvarEdicao = async function(){
   const pid = ctx.pessoa;
-  demoSalvarEdicao();
-  if(CONEXAO.ligada) setTimeout(() => sincronizarPessoa(pid), 800);
+  await demoSalvarEdicao();
+  if(CONEXAO.ligada) sincronizarPessoa(pid);
 };
 
 const demoSalvarPapel = salvarPapel;
