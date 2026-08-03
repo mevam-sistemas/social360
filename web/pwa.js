@@ -1,6 +1,16 @@
 (function(){
   if(!('serviceWorker' in navigator)) return;
   let recarregando = false, jaControlada = !!navigator.serviceWorker.controller;
+  const VAPID_PUBLICA='BDUSJw-XU8Y-bKO0RDKT2n2i_teEve8iu26xFiXs4GF4JGQ33MpRWgE7M4ee090Atrwo1m8zPQqY7c1HsfKUeUQ';
+  const bytesBase64Url=s=>{const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...b].map(c=>c.charCodeAt(0)));};
+  window.ativarNotificacoesPush=async function(){
+    if(!('PushManager'in window))throw new Error('Este aparelho não oferece notificações push.');
+    const perm=await Notification.requestPermission(); if(perm!=='granted')throw new Error('As notificações não foram autorizadas.');
+    const reg=await navigator.serviceWorker.ready; let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytesBase64Url(VAPID_PUBLICA)});
+    if(typeof window.registrarPushNoBanco!=='function')throw new Error('Entre na sua conta antes de ativar as notificações.');
+    await window.registrarPushNoBanco(sub.toJSON()); return true;
+  };
 
   function avisoAtualizacao(reg){
     if(!navigator.serviceWorker.controller || !reg.waiting) return;
@@ -41,6 +51,7 @@
       const verificar = () => reg.update().catch(() => {});
       verificar(); setInterval(verificar, 15 * 60 * 1000);
       document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') verificar(); });
+      const id=new URLSearchParams(location.search).get('diretiva'); if(id){let n=0;const abrir=setInterval(()=>{n++;if(typeof abrirDiretivas==='function'&&typeof CONEXAO!=='undefined'&&CONEXAO.ligada){clearInterval(abrir);abrirDiretivas();history.replaceState({},'',location.pathname);}else if(n>40)clearInterval(abrir);},250);}
     }catch(e){ console.error('[PWA] registro indisponível', e); }
   });
 })();

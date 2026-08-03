@@ -20,6 +20,12 @@ const SBS_KEY = 'sb_publishable_7-sR87eV6b4I8nx-k6Hriw_DEVprjfz'; /* chave públ
 const sbc = supabase.createClient(SBS_URL, SBS_KEY, { db: { schema: 'social' } });
 
 const CONEXAO = { ligada:false, eu:null, orgId:null };
+window.registrarPushNoBanco=async function(s){
+  if(!CONEXAO.ligada)throw new Error('Entre na sua conta antes de ativar as notificações.');
+  const {error}=await sbc.from('push_inscricoes').upsert({instituicao_id:CONEXAO.orgId,equipe_id:CONEXAO.eu.id,
+    endpoint:s.endpoint,p256dh:s.keys?.p256dh,auth:s.keys?.auth,agente:navigator.userAgent,atualizada_em:new Date().toISOString()},{onConflict:'endpoint'});
+  if(error)throw new Error(error.message);
+};
 /* teste de 7 dias vencido sem assinatura ativa → app inteiro trava na tela
    de assinar (01/08/2026). Populado por entrarComVinculo() via meu_acesso(). */
 let ACESSO = { bloqueado:false, dias_restantes:null, pode_assinar:false };
@@ -435,7 +441,9 @@ async function carregarTudo(){
   fns.forEach(f => FUNCOES.push({ id:f.id, nome:f.nome, ativa: f.ativa !== false }));
   const nomeFuncao = fid => fid ? ((FUNCOES.find(f => f.id === fid) || {}).nome || '') : '';
   EQUIPE.length = 0;
-  eqp.forEach(u => EQUIPE.push({ id:u.id, nome:u.nome, email:u.email,
+  const caminhosEq=[...new Set(eqp.map(u=>u.foto_url).filter(Boolean))],urlsEq=new Map();
+  if(caminhosEq.length){const {data}=await sbc.storage.from('fotos-equipe').createSignedUrls(caminhosEq,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsEq.set(x.path,x.signedUrl);});}
+  eqp.forEach(u => EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, foto:urlsEq.get(u.foto_url)||null,fotoPath:u.foto_url||null,
     papel: P_DB2TELA[u.papel] || 'operador',
     unidade: u.unidade_id ? ((LOCAIS.find(l => l.id === u.unidade_id) || {}).curto || 'Todas') : 'Todas',
     funcao: nomeFuncao(u.funcao_id),
@@ -454,7 +462,7 @@ async function carregarTudo(){
     destinatario_email:l.destinatario_email, destinatario_nome:l.destinatario_nome,
     enviado_em:new Date(l.enviado_em), sucesso:l.sucesso, erro:l.erro||null }));
 
-  const [pes, ats, prs, regs, pends, doas, fts, presEq, axs, locaisEstoque, obsDoacoes, permissoesPapel] = await Promise.all([
+  const [pes, ats, prs, regs, pends, doas, fts, presEq, axs, locaisEstoque, obsDoacoes, permissoesPapel, dirs, dirDest, dirCom] = await Promise.all([
     pega(sbc.from('pessoas').select('*').order('criada_em', { ascending:false }), 'pessoas'),
     pega(sbc.from('atendimentos').select('*, atendimento_servicos(servico_id, quantidade)').order('quando'), 'atendimentos'),
     pega(sbc.from('presencas').select('*').order('entrada'), 'presenças'),
@@ -466,7 +474,10 @@ async function carregarTudo(){
     pega(sbc.from('anexos').select('*').order('criado_em'), 'anexos'),
     pega(sbc.from('locais_estoque').select('*').order('nome'), 'locais de armazenamento'),
     pega(sbc.from('doacao_observacoes').select('*').order('criada_em'), 'observações das doações'),
-    pega(sbc.from('papel_permissoes').select('papel,acao,permitido'), 'permissões dos perfis')
+    pega(sbc.from('papel_permissoes').select('papel,acao,permitido'), 'permissões dos perfis'),
+    pega(sbc.from('diretivas').select('*').order('criada_em',{ascending:false}).limit(100),'orientações'),
+    pega(sbc.from('diretiva_destinatarios').select('*'),'destinatários das orientações'),
+    pega(sbc.from('diretiva_comentarios').select('*').order('criada_em'),'comentários das orientações')
   ]);
   permissoesPapel.forEach(p=>{
     const papel=P_DB2TELA[p.papel]||p.papel, lista=PERMISSOES[papel]; if(!lista)return;
@@ -482,6 +493,13 @@ async function carregarTudo(){
     (assinadas||[]).forEach(x=>{ if(x.signedUrl)urlsFoto.set(x.path,x.signedUrl); });
   }
   const urlFoto=u=>urlsFoto.get(u)||u||null;
+  const caminhosDir=[...new Set(dirs.map(d=>d.anexo_url).filter(Boolean))],urlsDir=new Map();
+  if(caminhosDir.length){const {data}=await sbc.storage.from('diretivas').createSignedUrls(caminhosDir,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsDir.set(x.path,x.signedUrl);});}
+  BD.diretivas.length=0;
+  dirs.forEach(d=>{const meu=dirDest.find(x=>x.diretiva_id===d.id&&x.equipe_id===CONEXAO.eu.id);BD.diretivas.push({id:d.id,titulo:d.titulo,texto:d.texto,prioridade:d.prioridade,destino:d.destino,
+    anexo:urlsDir.get(d.anexo_url)||null,anexoPath:d.anexo_url||null,autor:nomeDe(d.criada_por),quando:new Date(d.criada_em),lida:!!meu?.lida_em,ciente:!!meu?.ciente_em,
+    comentarios:dirCom.filter(c=>c.diretiva_id===d.id).map(c=>({id:c.id,texto:c.texto,quem:nomeDe(c.equipe_id),quando:new Date(c.criada_em)}))});});
+  if(typeof atualizarBadgeDiretivas==='function')atualizarBadgeDiretivas();
   const anexosPessoa=axs.filter(x=>x.pessoa_id&&!x.atendimento_id&&!x.doacao_id);
   const caminhosDocs=[...new Set(anexosPessoa.map(x=>x.url).filter(Boolean))], urlsDocs=new Map();
   if(caminhosDocs.length){ const {data:assinados,error:erroDocs}=await sbc.storage.from('documentos-pessoas').createSignedUrls(caminhosDocs,3600);
@@ -555,6 +573,17 @@ async function carregarTudo(){
    Se o banco recusar, o aviso aparece e nada fica escondido.
    ============================================================ */
 const demoDados = Object.assign({}, dados);
+
+dados.criarDiretiva=async function(d){
+  if(!CONEXAO.ligada)return demoDados.criarDiretiva(d);
+  let path=null,url=null;
+  if(d.anexo){path=`${CONEXAO.orgId}/${Date.now()}-${crypto.randomUUID()}.webp`;const {error}=await sbc.storage.from('diretivas').upload(path,blobDeDataUrl(d.anexo),{contentType:'image/webp'});if(error)throw error;const s=await sbc.storage.from('diretivas').createSignedUrl(path,3600);url=s.data?.signedUrl||null;}
+  const r=await sbc.rpc('criar_diretiva',{p_titulo:d.titulo,p_texto:d.texto,p_prioridade:d.prioridade,p_destino:d.destino,p_anexo_url:path});if(r.error)throw new Error(r.error.message);
+  const n={id:r.data,titulo:d.titulo,texto:d.texto,prioridade:d.prioridade,destino:d.destino,anexo:url,anexoPath:path,autor:SESSAO.nome,quando:new Date(),lida:true,ciente:false,comentarios:[]};BD.diretivas.unshift(n);
+  sbc.functions.invoke('enviar-diretiva-push',{body:{diretiva_id:r.data}}).catch(e=>console.error('[push]',e)); return n;
+};
+dados.marcarDiretiva=async function(id,ciente){if(!CONEXAO.ligada)return demoDados.marcarDiretiva(id,ciente);const r=await sbc.rpc('marcar_diretiva',{p_id:id,p_ciente:!!ciente});if(r.error)throw new Error(r.error.message);const d=BD.diretivas.find(x=>x.id===id);if(d){d.lida=true;if(ciente)d.ciente=true;}return d;};
+dados.comentarDiretiva=async function(id,texto){if(!CONEXAO.ligada)return demoDados.comentarDiretiva(id,texto);const r=await sbc.rpc('comentar_diretiva',{p_id:id,p_texto:texto});if(r.error)throw new Error(r.error.message);const c={id:r.data,texto,quem:SESSAO.nome,quando:new Date()};const d=BD.diretivas.find(x=>x.id===id);if(d)d.comentarios.push(c);return c;};
 
 dados.definirPermissaoPapel = async function(papel,acao,permitido){
   if(!CONEXAO.ligada)return demoDados.definirPermissaoPapel(papel,acao,permitido);
@@ -824,7 +853,7 @@ salvarEdicao = async function(){
 };
 
 const demoSalvarPapel = salvarPapel;
-salvarPapel = function(uid){
+salvarPapel = async function(uid){
   if(!CONEXAO.ligada) return demoSalvarPapel(uid);
   const nome = $('eq-nome').value.trim(), email = $('eq-email').value.trim().toLowerCase(),
         papel = $('eq-papel').value, obs = $('eq-obs').value.trim(), unid = $('eq-unidade').value,
@@ -835,17 +864,20 @@ salvarPapel = function(uid){
   const funcaoId = funcao ? ((FUNCOES.find(f => f.nome === funcao) || {}).id || null) : null;
   const temAcesso = acesso !== 'nao';
   const u = EQUIPE.find(x => x.id === uid);
+  let fotoPath=u?.fotoPath||null,fotoUrl=u?.foto||null;
+  const idAlvo=uid||crypto.randomUUID();
+  if(fotoEquipeNova){fotoPath=`${CONEXAO.orgId}/${idAlvo}/perfil-${Date.now()}.webp`;const up=await sbc.storage.from('fotos-equipe').upload(fotoPath,blobDeDataUrl(fotoEquipeNova),{contentType:'image/webp'});if(up.error){alert(up.error.message);return;}const sg=await sbc.storage.from('fotos-equipe').createSignedUrl(fotoPath,3600);fotoUrl=sg.data?.signedUrl||fotoEquipeNova;}
   if(u){
-    Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:unid });
+    Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
     pushDB(sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
-      observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId, tem_acesso:temAcesso })
+      observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId, tem_acesso:temAcesso,foto_url:fotoPath })
       .eq('id', uid).eq('instituicao_id', CONEXAO.orgId), 'a alteração do acesso');
   } else {
-    const id = crypto.randomUUID();
-    EQUIPE.push({ id, nome, email, papel, funcao, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()) });
+    const id = idAlvo;
+    EQUIPE.push({ id, nome, email, papel, funcao, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
     pushDB(sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
       papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId,
-      tem_acesso:temAcesso }), 'o novo acesso');
+      tem_acesso:temAcesso,foto_url:fotoPath }), 'o novo acesso');
   }
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',

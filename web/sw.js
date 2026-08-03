@@ -1,8 +1,8 @@
 /* 360social PWA — somente a interface pública entra no cache.
    Dados do Supabase, fotos, documentos e prontuários nunca são interceptados. */
-const VERSAO = '360social-shell-v15';
+const VERSAO = '360social-shell-v16';
 const SHELL = [
-  '/', '/manifest.json', '/supabase.min.js', '/ponte-banco.js?v=15', '/pwa.js?v=1',
+  '/', '/manifest.json', '/supabase.min.js', '/ponte-banco.js?v=16', '/pwa.js?v=2',
   '/marca/icone-laranja.svg', '/marca/png/icone-laranja-180.png',
   '/marca/png/icone-laranja-192.png', '/marca/png/icone-laranja-512.png'
 ];
@@ -21,6 +21,19 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
   if(event.data && event.data.tipo === 'ATUALIZAR_AGORA') self.skipWaiting();
+});
+self.addEventListener('push', event => {
+  let d={}; try{d=event.data?event.data.json():{};}catch(_){d={texto:event.data?.text()};}
+  event.waitUntil(self.registration.showNotification(d.titulo||'Nova orientação · 360social',{
+    body:d.texto||'Há uma nova orientação para a equipe.',icon:'/marca/png/icone-laranja-192.png',
+    badge:'/marca/png/icone-laranja-192.png',tag:d.diretiva_id?'diretiva-'+d.diretiva_id:'diretiva',data:{diretiva_id:d.diretiva_id||null,url:'/?diretiva='+(d.diretiva_id||'')}
+  }));
+});
+self.addEventListener('notificationclick', event => {
+  event.notification.close(); const alvo=event.notification.data?.url||'/';
+  event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(lista=>{
+    for(const c of lista){if('focus' in c){c.navigate(alvo);return c.focus();}} return clients.openWindow(alvo);
+  }));
 });
 
 self.addEventListener('fetch', event => {

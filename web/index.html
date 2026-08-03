@@ -612,6 +612,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
     <div class="cab">
       <div class="t"><h1 id="c-tit"></h1><div class="sub" id="c-sub"></div></div>
+      <button id="dir-bt" class="bt g pq" onclick="abrirDiretivas()" title="Orientações da equipe">Orientações <span class="n" id="dir-n">0</span></button>
       <div class="acoes" id="c-acoes"></div>
     </div>
 
@@ -906,6 +907,11 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <section class="tela" id="t-doacoes">
         <input type="file" id="dc-arq" accept="image/*" multiple style="display:none" onchange="pegarAnexosDoacao(this)">
         <div id="d-corpo"></div>
+      </section>
+
+      <section class="tela" id="t-diretivas">
+        <input type="file" id="dir-img" accept="image/*" style="display:none" onchange="pegarImagemDiretiva(this)">
+        <div id="dir-corpo"></div>
       </section>
 
       <!-- RELATÓRIOS -->
@@ -1203,7 +1209,7 @@ const ANEXOS_TIPO = ['RG (foto)','CPF (foto)','Comprovante de residência','Rece
    alguém usa a foto atual; o histórico existe para mostrar mudança ao
    longo do tempo, e para isso 360px bastam. Rosto muda — e ver essa
    mudança é, muitas vezes, ver o efeito do trabalho da instituição. */
-const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], locaisEstoque:[], presencas:[], fotos:[], presEquipe:[], auditoria:[], emailsLog:[] };
+const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], locaisEstoque:[], diretivas:[], presencas:[], fotos:[], presEquipe:[], auditoria:[], emailsLog:[] };
 BD.locaisEstoque.push({id:'le1',nome:'Depósito principal',descricao:'',ativo:true},{id:'le2',nome:'Sala de roupas',descricao:'',ativo:true});
 
 (function semear(){
@@ -1424,6 +1430,9 @@ BD.locaisEstoque.push({id:'le1',nome:'Depósito principal',descricao:'',ativo:tr
 /* ---- consultas ---- */
 const dados = {
   definirPermissaoPapel(papel,acao,permitido){ return { papel,acao,permitido }; },
+  criarDiretiva(d){ const n=Object.assign({id:'dir'+Date.now(),quando:new Date(),autor:SESSAO.nome,lida:true,ciente:false,comentarios:[]},d); BD.diretivas.unshift(n); return n; },
+  marcarDiretiva(id,ciente){ const d=BD.diretivas.find(x=>x.id===id); if(d){d.lida=true;if(ciente)d.ciente=true;} return d; },
+  comentarDiretiva(id,texto){ const d=BD.diretivas.find(x=>x.id===id); if(!d)return null; const c={id:'dc'+Date.now(),texto,quem:SESSAO.nome,quando:new Date()}; d.comentarios.push(c); return c; },
   buscarPessoas(t){
     const q = String(t||'').toLowerCase().trim(); if(!q) return [];
     const nums = q.replace(/\D/g,'');
@@ -1569,7 +1578,7 @@ const PAPEIS = {
 let SESSAO = Object.assign({ papel:'operador' }, PAPEIS.operador);
 let ctx = { pessoa:null, servs:[], servsQtd:{}, anexos:[], foto:null, retorno:false, local:'l1',
   formPE:null, formPEModo:'entrada', histLocal:null, histDe:'', histAte:'',
-  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, docsCadastro:[], docPessoaAlvo:null,
+  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, docsCadastro:[], docPessoaAlvo:null, imagemDiretiva:null,
   doModo:'hoje', listaGestao:null };
 let tela = 'atender';
 
@@ -2171,8 +2180,8 @@ function blocoEquipe(){
     (a.status===b.status ? ordem.indexOf(a.papel)-ordem.indexOf(b.papel)
                          : a.status==='ativo' ? -1 : 1));
   const linhas = lista.map(u => `<div class="linha-cfg" style="cursor:pointer" onclick="abrirEquipeMembro('${u.id}')">
-    <div class="in" style="background:${corDe(u.nome)};width:38px;height:38px;border-radius:50%;
-      display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none">${iniciais(u.nome)}</div>
+    ${u.foto?`<img src="${u.foto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:38px;height:38px;border-radius:50%;
+      display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none">${iniciais(u.nome)}</div>`}
     <div class="t"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
       <small>${esc(ROTULO_PAPEL[u.papel])}${u.funcao?' · '+esc(u.funcao):''} · ${esc(u.unidade)} · ${esc(u.email)}
@@ -2271,9 +2280,9 @@ function abrirEquipeMembro(uid){
   const participacoes = hist.filter(h => h.tipo === 'presenca').length;
   const faltas = hist.filter(h => h.tipo === 'falta').length;
   const aberta = hist.find(h => h.tipo === 'presenca' && !h.saida);
-  $('em-ficha').innerHTML = `<div class="in" style="background:${corDe(u.nome)};width:56px;height:56px;
+  $('em-ficha').innerHTML = `${u.foto?`<img src="${u.foto}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:56px;height:56px;
       border-radius:50%;display:grid;place-items:center;color:#fff;font-size:19px;font-weight:800;flex:none">
-      ${iniciais(u.nome)}</div>
+      ${iniciais(u.nome)}</div>`}
     <div class="d"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
       <div class="cod">${esc(ROTULO_PAPEL[u.papel])}${u.funcao?' · '+esc(u.funcao):''} · ${esc(u.email)}</div>
@@ -2318,14 +2327,19 @@ function itemEquipe(e){
     <div class="quem">Registrado por ${esc(e.porQuem)}</div></div></div>`;
 }
 
+let fotoEquipeNova=null;
 function formPapel(uid){
   const u = EQUIPE.find(x => x.id === uid) || { nome:'', papel:'operador', email:'',
     unidade:'Todas', funcao:'', status:'ativo', acesso:'sim' };
   const novo = !uid;
+  fotoEquipeNova=null;
   const ordem = ['presidente','coordenador','social','operador'];
   $('org-corpo').innerHTML = `
     <div class="pn"><div class="ph"><h2>${novo?'Adicionar pessoa à equipe':esc(u.nome)}</h2></div>
       <div class="cx">
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px"><div id="eq-foto-prev">${u.foto?`<img src="${u.foto}" style="width:72px;height:72px;border-radius:50%;object-fit:cover">`:`<div class="in" style="width:72px;height:72px;border-radius:50%;background:${corDe(u.nome||'Equipe')};display:grid;place-items:center;color:#fff;font-weight:800">${iniciais(u.nome||'EQ')}</div>`}</div>
+          <div><label class="bt g" style="cursor:pointer">Foto de perfil<input type="file" accept="image/*" style="display:none" onchange="pegarFotoEquipe(this)"></label>
+          <div class="ajuda" style="margin-top:6px">Imagem opcional, privada e reduzida automaticamente.</div></div></div>
         <div class="gr-form">
           <label class="cp"><span>Nome completo</span>
             <input id="eq-nome" value="${esc(u.nome)}"></label>
@@ -2368,6 +2382,7 @@ function formPapel(uid){
   avisoPapel();
   ir('org', { titulo:'Equipe e acessos', sub: novo?'Nova pessoa na equipe':esc(u.nome) });
 }
+async function pegarFotoEquipe(inp){const f=inp.files[0];if(!f)return;try{fotoEquipeNova=await prepararFotoPessoa(f);$('eq-foto-prev').innerHTML=`<img src="${fotoEquipeNova}" style="width:72px;height:72px;border-radius:50%;object-fit:cover">`;}catch(e){alert(e.message)}finally{inp.value='';}}
 function avisoPapel(){
   const p = $('eq-papel').value;
   const lista = PERMISSOES[p].map(a => ACOES[a]);
@@ -2384,9 +2399,9 @@ function salvarPapel(uid){
   const obs = $('eq-obs').value.trim();
   if(!nome){ $('eq-nome').focus(); return; }
   const u = EQUIPE.find(x => x.id === uid);
-  if(u){ Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:$('eq-unidade').value }); }
+  if(u){ Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
   else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, papel, funcao, acesso, obs,
-    unidade:$('eq-unidade').value, status:'ativo', desde: iso(new Date()) });
+    unidade:$('eq-unidade').value, status:'ativo', desde: iso(new Date()),foto:fotoEquipeNova });
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',
     `<div class="nota ok" style="margin-bottom:14px">${esc(nome)} — ${ROTULO_PAPEL[papel]}.
@@ -3657,6 +3672,36 @@ function montarListaGestao(){
 }
 
 /* ============================================================
+   Orientações da equipe
+   ============================================================ */
+function podePublicarDiretiva(){ return ['presidente','coordenador','social'].includes(SESSAO.papel); }
+function atualizarBadgeDiretivas(){ const n=BD.diretivas.filter(d=>!d.lida).length, el=$('dir-n'); if(el)el.textContent=n; }
+function abrirDiretivas(){
+  const notificacoes=`<div class="pn"><div class="cx"><div class="linha"><div class="t"><b>Notificações neste aparelho</b><small>Receba orientações mesmo com o aplicativo fechado.</small></div><span class="sp"></span><button class="bt g" onclick="ativarPushUI()">Ativar notificações</button></div></div></div>`;
+  const form=podePublicarDiretiva()?`<div class="pn"><div class="ph"><h2>Nova orientação</h2></div><div class="cx">
+    <div class="par"><div class="cp"><label>Título</label><input id="dir-titulo" maxlength="100" placeholder="Ex.: Organização do atendimento de hoje"></div>
+    <div class="cp"><label>Tipo</label><select id="dir-prioridade"><option value="recomendacao">Recomendação</option><option value="ordem_dia">Ordem do dia</option><option value="urgente">Urgente</option></select></div></div>
+    <div class="cp"><label>Orientação <span class="op">— até 300 caracteres</span></label><textarea id="dir-texto" maxlength="300" rows="4" oninput="$('dir-resta').textContent=300-this.value.length"></textarea><div class="ajuda"><span id="dir-resta">300</span> caracteres restantes</div></div>
+    <div class="cp"><label>Destinatários</label><select id="dir-destino"><option value="todos">Toda a equipe ativa</option><option value="escala_hoje">Somente a equipe presente na escala de hoje</option></select></div>
+    <div class="linha"><button class="bt g" onclick="$('dir-img').click()">Anexar imagem</button><span id="dir-img-nome" class="sub"></span><button class="bt" onclick="publicarDiretiva()">Publicar orientação</button></div>
+  </div></div>`:'';
+  const lista=BD.diretivas.map(d=>`<div class="pn"><div class="cx"><div class="linha"><span class="et ${d.prioridade==='urgente'?'rx':d.prioridade==='ordem_dia'?'av':'az'}">${d.prioridade==='urgente'?'Urgente':d.prioridade==='ordem_dia'?'Ordem do dia':'Recomendação'}</span><b>${esc(d.titulo)}</b><span class="sp"></span><span class="hr">${d.quando.toLocaleString('pt-BR')}</span></div>
+    <p style="font-size:14.5px;line-height:1.6;white-space:pre-wrap">${esc(d.texto)}</p>${d.anexo?`<a href="${d.anexo}" target="_blank" rel="noopener"><img src="${d.anexo}" style="max-width:260px;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--ln)"></a>`:''}
+    <div class="quem">Por ${esc(d.autor)} · ${d.destino==='escala_hoje'?'escala de hoje':'toda a equipe'}</div>
+    ${(d.comentarios||[]).map(c=>`<div class="obs">${esc(c.texto)}<div class="quem">${esc(c.quem)} · ${c.quando.toLocaleString('pt-BR')}</div></div>`).join('')}
+    <div class="linha" style="margin-top:10px">${!d.ciente?`<button class="bt pq" onclick="darCienciaDiretiva('${d.id}')">Marcar como ciente</button>`:'<span class="et ok">Ciente</span>'}<button class="bt g pq" onclick="comentarDiretivaUI('${d.id}')">Comentar</button></div>
+  </div></div>`).join('')||'<div class="nada"><b>Nenhuma orientação</b><p>Recomendações e ordens do dia aparecerão aqui.</p></div>';
+  $('dir-corpo').innerHTML=notificacoes+form+lista; ir('diretivas',{titulo:'Orientações da equipe',sub:'Recomendações, ordens do dia, ciência e comentários'});
+  BD.diretivas.filter(d=>!d.lida).forEach(d=>dados.marcarDiretiva(d.id,false)); atualizarBadgeDiretivas();
+}
+async function ativarPushUI(){try{await window.ativarNotificacoesPush();alert('Notificações ativadas neste aparelho.');}catch(e){alert(e.message||'Não foi possível ativar as notificações.');}}
+async function pegarImagemDiretiva(inp){ const f=inp.files[0]; if(!f)return; try{ctx.imagemDiretiva=await prepararFotoPessoa(f);$('dir-img-nome').textContent=f.name;}catch(e){alert(e.message)} finally{inp.value='';} }
+async function publicarDiretiva(){ const titulo=$('dir-titulo').value.trim(),texto=$('dir-texto').value.trim(); if(!titulo||!texto){alert('Informe título e orientação.');return;}
+  try{await Promise.resolve(dados.criarDiretiva({titulo,texto,prioridade:$('dir-prioridade').value,destino:$('dir-destino').value,anexo:ctx.imagemDiretiva}));ctx.imagemDiretiva=null;abrirDiretivas();}catch(e){alert(e.message||'Não foi possível publicar.');}}
+async function darCienciaDiretiva(id){await Promise.resolve(dados.marcarDiretiva(id,true));abrirDiretivas();}
+async function comentarDiretivaUI(id){const t=prompt('Comentário (até 500 caracteres)');if(!t||!t.trim())return;await Promise.resolve(dados.comentarDiretiva(id,t.trim().slice(0,500)));abrirDiretivas();}
+
+/* ============================================================
    Doações
    ------------------------------------------------------------
    "Hoje" é o ponto de partida — mesmo princípio do histórico por
@@ -4068,6 +4113,7 @@ function montarResumoPessoas(){
 /* ---- início ---- */
 identidade();
 montarAtender();
+atualizarBadgeDiretivas();
 ir('atender');
 /* O pulso. Se a contagem só mudasse quando alguém trocasse de tela,
    "tempo real" seria promessa de brochura. Só redesenhamos a faixa e o
@@ -4079,6 +4125,6 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=15"></script>
-<script src="pwa.js?v=1"></script>
+<script src="ponte-banco.js?v=16"></script>
+<script src="pwa.js?v=2"></script>
 </body></html>
