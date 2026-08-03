@@ -1,0 +1,7 @@
+# O token do GitHub configurado neste remote não tem o escopo "workflow",
+# então o GitHub recusa qualquer push que crie/altere arquivo dentro de
+# .github/workflows/ (ver commit 75b9bab). O arquivo abaixo fica só no
+# disco local — já foi entregue separadamente pra ser adicionado direto
+# pela interface do GitHub, ou depois de trocar o token por um com o
+# escopo certo.
+.github/workflows/checagem-basica.yml
