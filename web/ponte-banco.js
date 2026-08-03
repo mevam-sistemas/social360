@@ -895,16 +895,45 @@ virarEvento = function(i){
 };
 
 const demoSubirLogo = subirLogo;
-subirLogo = function(inp){
-  demoSubirLogo(inp);
-  if(CONEXAO.ligada) setTimeout(() => pushDB(sbc.from('instituicoes')
-    .update({ logo_url: ORG.logo }).eq('id', CONEXAO.orgId), 'o logotipo'), 900);
+const LOGO_BUCKET = 'logos-instituicoes';
+function blobDeDataUrl(u){
+  const [cabecalho, b64] = u.split(','), mime = (cabecalho.match(/^data:([^;]+)/)||[])[1] || 'image/webp';
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type:mime });
+}
+subirLogo = async function(inp){
+  const logo = await demoSubirLogo(inp);
+  if(!logo || !CONEXAO.ligada) return;
+  const caminho = `${CONEXAO.orgId}/logo.webp`;
+  try{
+    const arquivo = blobDeDataUrl(logo);
+    const { error: envioErro } = await sbc.storage.from(LOGO_BUCKET)
+      .upload(caminho, arquivo, { contentType:'image/webp', cacheControl:'3600', upsert:true });
+    if(envioErro) throw envioErro;
+    const { data: publico } = sbc.storage.from(LOGO_BUCKET).getPublicUrl(caminho);
+    const logoUrl = `${publico.publicUrl}?v=${Date.now()}`;
+    const { error: bancoErro } = await sbc.from('instituicoes')
+      .update({ logo_url:logoUrl }).eq('id', CONEXAO.orgId);
+    if(bancoErro) throw bancoErro;
+    ORG.logo = logoUrl; identidade(); abrirInstituicao('identidade');
+    mensagemLogo('Logotipo salvo.', true);
+  }catch(e){
+    console.error('[banco] salvar logotipo', e);
+    mensagemLogo('Não foi possível salvar o logotipo. Tente novamente.', false);
+    avisoDB('o logotipo');
+  }
 };
 const demoTirarLogo = tirarLogo;
-tirarLogo = function(){
+tirarLogo = async function(){
   demoTirarLogo();
-  if(CONEXAO.ligada) pushDB(sbc.from('instituicoes')
-    .update({ logo_url:null }).eq('id', CONEXAO.orgId), 'a remoção do logotipo');
+  if(!CONEXAO.ligada) return;
+  const caminho = `${CONEXAO.orgId}/logo.webp`;
+  const { error } = await sbc.from('instituicoes')
+    .update({ logo_url:null }).eq('id', CONEXAO.orgId);
+  if(error){ console.error('[banco] remover logotipo', error); avisoDB('a remoção do logotipo'); return; }
+  const { error: removerErro } = await sbc.storage.from(LOGO_BUCKET).remove([caminho]);
+  if(removerErro) console.error('[banco] remover arquivo do logotipo', removerErro);
 };
 
 /* Conectado, o botão de papel vira porta de saída — papel de verdade
