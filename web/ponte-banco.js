@@ -17,6 +17,7 @@
 
 const SBS_URL = 'https://lshjtlzlywipxtfwbxxe.supabase.co';
 const SBS_KEY = 'sb_publishable_7-sR87eV6b4I8nx-k6Hriw_DEVprjfz'; /* chave pública */
+const TIPO_LINK_AUTH = new URLSearchParams(location.hash.replace(/^#/, '')).get('type');
 const sbc = supabase.createClient(SBS_URL, SBS_KEY, { db: { schema: 'social' } });
 
 const CONEXAO = { ligada:false, eu:null, orgId:null };
@@ -134,7 +135,7 @@ async function pedirRedefinirSenha(){
   if(!email.includes('@')){ msg.textContent = 'Confira o e-mail informado.'; return; }
   msg.textContent = 'Enviando link de redefinição…';
   botao.disabled = true;
-  const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
   if(error){
     console.error('[banco] redefinir senha', error);
     msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.';
@@ -176,6 +177,7 @@ async function confirmarRedefinirSenha(){
   msg.textContent = 'Salvando…';
   const { error } = await sbc.auth.updateUser({ password: senha });
   if(error){ console.error('[banco] redefinir senha', error); msg.textContent = 'Não consegui salvar agora. Tente de novo.'; return; }
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
   const o = document.getElementById('redefinir-ov'); if(o) o.remove();
   await conectar();
 }
@@ -358,7 +360,7 @@ async function confirmarCadastroCompleto(){
       tipo_pessoa: CC_TIPO, documento: docDigitos, nome_instituicao: nomeInst,
       nome_pessoa: nomePessoa, telefone, cidade, endereco,
       termos_versao: '1.0', termos_aceitos_em: new Date().toISOString()
-    }, emailRedirectTo: location.origin + location.pathname }
+    }, emailRedirectTo: location.origin }
   });
   if(signErr){
     console.error('[banco] signUp', signErr);
@@ -880,21 +882,34 @@ salvarPapel = async function(uid){
   const idAlvo=uid||crypto.randomUUID();
   if(fotoEquipeNova){fotoPath=`${CONEXAO.orgId}/${idAlvo}/perfil-${Date.now()}.webp`;const up=await sbc.storage.from('fotos-equipe').upload(fotoPath,blobDeDataUrl(fotoEquipeNova),{contentType:'image/webp'});if(up.error){alert(up.error.message);return;}const sg=await sbc.storage.from('fotos-equipe').createSignedUrl(fotoPath,3600);fotoUrl=sg.data?.signedUrl||fotoEquipeNova;}
   if(u){
+    const {error}=await sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
+      observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId, tem_acesso:temAcesso,
+      foto_url:fotoPath, ...(temAcesso?{}:{auth_id:null}) })
+      .eq('id', uid).eq('instituicao_id', CONEXAO.orgId);
+    if(error){console.error('[banco] equipe',error);alert('Não foi possível salvar o acesso. Tente novamente.');return;}
     Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
-    pushDB(sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
-      observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId, tem_acesso:temAcesso,foto_url:fotoPath })
-      .eq('id', uid).eq('instituicao_id', CONEXAO.orgId), 'a alteração do acesso');
   } else {
     const id = idAlvo;
-    EQUIPE.push({ id, nome, email, papel, funcao, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
-    pushDB(sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
+    const {error}=await sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
       papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId,
-      tem_acesso:temAcesso,foto_url:fotoPath }), 'o novo acesso');
+      tem_acesso:temAcesso,foto_url:fotoPath });
+    if(error){console.error('[banco] equipe',error);alert('Não foi possível adicionar a pessoa à equipe.');return;}
+    EQUIPE.push({ id, nome, email, papel, funcao, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
+  }
+  let acessoMsg = temAcesso ? 'Preparando o convite…' : 'Cadastro salvo sem acesso ao sistema.';
+  if(temAcesso){
+    const {data,error}=await sbc.functions.invoke('convidar-equipe',{body:{equipe_id:idAlvo}});
+    if(error || data?.error){
+      console.error('[banco] convite da equipe',error||data?.error);
+      acessoMsg='A ficha foi salva, mas o convite não foi enviado. Confira o e-mail e tente salvar novamente.';
+    }else acessoMsg=data.status==='convite_enviado'
+      ? `Convite enviado para ${email}. A pessoa deve abrir o link e escolher a senha.`
+      : `A conta ${email} foi vinculada a esta ficha.`;
   }
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',
     `<div class="nota ok" style="margin-bottom:14px">${esc(nome)} — ${ROTULO_PAPEL[papel]}.
-     ${uid ? 'Acesso atualizado.' : 'Pessoa adicionada. Ela entra com o e-mail informado, por código.'}</div>`);
+     ${esc(acessoMsg)}</div>`);
 };
 
 const demoSalvarLocal = salvarLocal;
@@ -1159,7 +1174,7 @@ function esperarPlanoInstituicao(bloqueado, url){
 /* link de "esqueci minha senha" volta pra cá com esse evento — único jeito
    de recuperar acesso agora que não existe mais código por e-mail. */
 sbc.auth.onAuthStateChange((event) => {
-  if(event === 'PASSWORD_RECOVERY') abrirRedefinirSenha();
+  if(event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && TIPO_LINK_AUTH === 'invite')) abrirRedefinirSenha();
 });
 
 /* ---- arranque: sessão guardada entra sozinha; visita vê a tela de
@@ -1169,7 +1184,10 @@ sbc.auth.onAuthStateChange((event) => {
 (async () => {
   try{
     const { data:{ session } } = await sbc.auth.getSession();
-    if(session){ await conectar(); return; }
+    if(session){
+      if(TIPO_LINK_AUTH === 'invite'){ abrirRedefinirSenha(); return; }
+      await conectar(); return;
+    }
   }catch(e){ console.error('[banco] sessão', e); }
   const rod = document.querySelector('.rodape-l');
   if(rod && !document.getElementById('bt-entrar')){
