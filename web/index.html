@@ -1913,8 +1913,9 @@ function blocoIdentidade(){
           ${ORG.logo?`<button class="bt g" onclick="tirarLogo()">Voltar ao monograma</button>`:''}
         </div>
         <div style="font-size:12.5px;color:var(--tx3);margin-top:11px;line-height:1.55">
-          PNG ou SVG com fundo transparente funcionam melhor. A imagem é reduzida para 320&nbsp;px
-          e comprimida no envio — logotipo de 4&nbsp;MB não deixa a plataforma mais bonita, só mais lenta.</div>
+          PNG, WebP ou SVG com fundo transparente funcionam melhor. Aceitamos arquivos de até
+          5&nbsp;MB; antes do envio, a imagem é reduzida para no máximo 320&nbsp;px e 120&nbsp;KB.</div>
+        <div id="org-logo-msg" aria-live="polite" style="font-size:12.5px;margin-top:8px"></div>
       </div>
     </div></div>
   <div class="pn"><div class="ph"><h2>Nome</h2></div><div class="cx">
@@ -2478,9 +2479,49 @@ function virarEvento(i){
   const e = EMAIL.eventos[i]; if(e.fixo) return;
   e.liga = !e.liga; abrirInstituicao('email');
 }
-function subirLogo(inp){
-  const f = inp.files[0]; if(!f) return;
-  comprimir(f, 320, .9).then(u => { ORG.logo = u; identidade(); abrirInstituicao('identidade'); });
+const LOGO_ARQUIVO_MAX = 5 * 1024 * 1024;
+const LOGO_RESULTADO_MAX = 120 * 1024;
+function tamanhoDataUrl(u){
+  const b64 = (u.split(',')[1] || '').replace(/=+$/, '');
+  return Math.ceil(b64.length * 3 / 4);
+}
+function mensagemLogo(texto, ok){
+  const m = $('org-logo-msg'); if(!m) return;
+  m.textContent = texto; m.style.color = ok ? 'var(--ok)' : 'var(--pg)';
+}
+function comprimirLogo(file){
+  if(!/^image\//.test(file.type)) return Promise.reject(new Error('Escolha um arquivo de imagem.'));
+  if(file.size > LOGO_ARQUIVO_MAX)
+    return Promise.reject(new Error('A imagem original precisa ter no máximo 5 MB.'));
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const tentativas = [[320,.86],[280,.76],[240,.66]];
+      for(const [max,q] of tentativas){
+        const f = Math.min(1, max/Math.max(img.width,img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width*f));
+        c.height = Math.max(1, Math.round(img.height*f));
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        const u = c.toDataURL('image/webp', q);
+        if(tamanhoDataUrl(u) <= LOGO_RESULTADO_MAX) return res(u);
+      }
+      rej(new Error('Não consegui reduzir essa imagem para 120 KB. Tente um arquivo mais simples.'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('A imagem não pôde ser aberta.')); };
+    img.src = url;
+  });
+}
+async function subirLogo(inp){
+  const f = inp.files[0]; if(!f) return null;
+  mensagemLogo('Preparando imagem…', true);
+  try{
+    const u = await comprimirLogo(f);
+    ORG.logo = u; identidade(); abrirInstituicao('identidade');
+    mensagemLogo('Imagem preparada. Salvando…', true);
+    return u;
+  }catch(e){ mensagemLogo(e.message, false); return null; }
 }
 function tirarLogo(){ ORG.logo = null; identidade(); abrirInstituicao('identidade'); }
 function salvarOrg(){
@@ -3797,5 +3838,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=8"></script>
+<script src="ponte-banco.js?v=9"></script>
 </body></html>
