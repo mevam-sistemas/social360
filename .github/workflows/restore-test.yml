@@ -1,0 +1,107 @@
+name: Teste de restauração
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 6 1 1,4,7,10 *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teste-restauracao
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: restore-test
+          POSTGRES_DB: social360_restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d social360_restore"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      PGPASSWORD: restore-test
+
+    steps:
+      - name: Obter código versionado
+        uses: actions/checkout@v4
+
+      - name: Instalar ferramentas
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes age postgresql-client-17 zstd awscli
+
+      - name: Validar configuração protegida
+        run: |
+          set -euo pipefail
+          required=(BACKUP_PASSPHRASE R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET)
+          for variable in "${required[@]}"; do
+            [[ -n "${!variable:-}" ]] || { echo "Segredo obrigatório ausente: $variable" >&2; exit 1; }
+          done
+
+      - name: Baixar backup diário mais recente
+        run: |
+          set -euo pipefail
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          key="$(aws --endpoint-url "$endpoint" s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix daily/ \
+            --query 'reverse(sort_by(Contents,&LastModified))[0].Key' --output text)"
+          [[ -n "$key" && "$key" != "None" ]] || { echo "Nenhum backup diário encontrado" >&2; exit 1; }
+          aws --endpoint-url "$endpoint" s3 cp "s3://${R2_BUCKET}/${key}" "${RUNNER_TEMP}/backup.age" --only-show-errors
+          echo "Backup selecionado: $(basename "$key")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Decifrar, extrair e validar integridade
+        run: |
+          set -euo pipefail
+          AGE_PASSPHRASE="$BACKUP_PASSPHRASE" age --decrypt --output "${RUNNER_TEMP}/backup.tar.zst" "${RUNNER_TEMP}/backup.age"
+          zstd --decompress --stdout "${RUNNER_TEMP}/backup.tar.zst" | tar --directory="${RUNNER_TEMP}" --extract
+          cd "${RUNNER_TEMP}/social360-backup"
+          sha256sum --check SHA256SUMS
+          /usr/lib/postgresql/17/bin/pg_restore --list database/social360.dump >/dev/null
+
+      - name: Preparar banco descartável
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d social360_restore -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists auth;
+          create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
+          create extension if not exists pgcrypto;
+          create extension if not exists "uuid-ossp";
+          SQL
+
+      - name: Restaurar dados operacionais
+        run: |
+          set -euo pipefail
+          dump="${RUNNER_TEMP}/social360-backup/database/social360.dump"
+          /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=social "$dump"
+          table_count="$(psql -h 127.0.0.1 -U postgres -d social360_restore -Atc \
+            "select count(*) from information_schema.tables where table_schema='social' and table_type='BASE TABLE'")"
+          [[ "$table_count" -gt 0 ]] || { echo "Restauração não criou tabelas sociais" >&2; exit 1; }
+          echo "### Restauração comprovada" >> "$GITHUB_STEP_SUMMARY"
+          echo "Checksums válidos e ${table_count} tabelas do esquema social restauradas em PostgreSQL descartável." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resumo de falha
+        if: failure()
+        run: |
+          echo "### Teste de restauração falhou" >> "$GITHUB_STEP_SUMMARY"
+          echo "A produção não foi alterada. Examine a etapa com falha antes de confiar no backup." >> "$GITHUB_STEP_SUMMARY"
