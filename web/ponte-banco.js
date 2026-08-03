@@ -520,25 +520,17 @@ dados.criarAtendimento = function(a){
   const id = crypto.randomUUID();
   const novo = Object.assign({ id, quando:new Date(), operador:SESSAO.nome, anexos:[], localDescricao:'', quantidades:{} }, a, { id });
   BD.atend.push(novo);
-  pushDB((async () => {
-    const r1 = await sbc.from('atendimentos').insert({ id, instituicao_id:CONEXAO.orgId,
-      pessoa_id:novo.pessoa, unidade_id:novo.local||null, local_descricao:novo.localDescricao||null,
-      observacao:novo.obs||null, operador_id:CONEXAO.eu.id });
-    if(r1.error) return r1;
-    if((novo.servicos||[]).length){
-      const r2 = await sbc.from('atendimento_servicos')
-        .insert(novo.servicos.map(s => ({ atendimento_id:id, servico_id:s,
-          quantidade: (novo.quantidades && novo.quantidades[s]) || 1 })));
-      if(r2.error) return r2;
-    }
-    if((novo.anexos||[]).length){
-      const r3 = await sbc.from('anexos').insert(novo.anexos.map(x => ({
-        instituicao_id:CONEXAO.orgId, pessoa_id:novo.pessoa, atendimento_id:id,
-        tipo:x.tipo, url:x.url, nome:x.nome||null, criado_por:CONEXAO.eu.id })));
-      if(r3.error) return r3;
-    }
-    return r1;
-  })(), 'o atendimento');
+  // atendimento + serviços + anexos numa transação só no banco (RPC) — antes
+  // eram 3 inserts separados aqui; se o 2º ou 3º falhasse depois do 1º já
+  // ter sido gravado, ficava um atendimento incompleto sem ninguém perceber
+  // na tela (achado numa auditoria de segurança, 03/08/2026 — ver
+  // db/20-transacoes-atomicas.sql, função criar_atendimento_completo).
+  pushDB(sbc.rpc('criar_atendimento_completo', {
+    p_id: id, p_pessoa_id: novo.pessoa, p_unidade_id: novo.local || null,
+    p_local_descricao: novo.localDescricao || null, p_observacao: novo.obs || null,
+    p_servicos: (novo.servicos || []).map(s => ({ servico_id: s, quantidade: (novo.quantidades && novo.quantidades[s]) || 1 })),
+    p_anexos: (novo.anexos || []).map(x => ({ tipo: x.tipo, url: x.url, nome: x.nome || null }))
+  }), 'o atendimento');
   return novo;
 };
 
@@ -547,19 +539,14 @@ dados.criarDoacao = function(d){
   const id = crypto.randomUUID();
   const novo = Object.assign({ id, quando:new Date(), responsavel:SESSAO.nome, observacao:'', anexos:[] }, d, { id });
   BD.doacoes.push(novo);
-  pushDB((async () => {
-    const r1 = await sbc.from('doacoes').insert({ id, instituicao_id:CONEXAO.orgId, tipo:novo.tipo,
-      item:novo.item, categoria:novo.categoria||null, quantidade:novo.qtd, quem:novo.quem,
-      unidade_id:novo.local||null, observacao:novo.observacao||null, registrada_por:CONEXAO.eu.id });
-    if(r1.error) return r1;
-    if((novo.anexos||[]).length){
-      const r2 = await sbc.from('anexos').insert(novo.anexos.map(x => ({
-        instituicao_id:CONEXAO.orgId, doacao_id:id,
-        tipo:x.tipo, url:x.url, nome:x.nome||null, criado_por:CONEXAO.eu.id })));
-      if(r2.error) return r2;
-    }
-    return r1;
-  })(), 'a doação');
+  // doação + anexos numa transação só (mesmo motivo do atendimento acima —
+  // ver db/20-transacoes-atomicas.sql, função criar_doacao_completa).
+  pushDB(sbc.rpc('criar_doacao_completa', {
+    p_id: id, p_tipo: novo.tipo, p_item: novo.item, p_categoria: novo.categoria || null,
+    p_quantidade: novo.qtd, p_quem: novo.quem, p_unidade_id: novo.local || null,
+    p_observacao: novo.observacao || null,
+    p_anexos: (novo.anexos || []).map(x => ({ tipo: x.tipo, url: x.url, nome: x.nome || null }))
+  }), 'a doação');
   return novo;
 };
 
@@ -598,7 +585,8 @@ dados.entrar = function(pessoaId, localId){
 dados.sair = function(pessoaId, localId){
   const e = demoDados.sair(pessoaId, localId);
   if(CONEXAO.ligada && e)
-    pushDB(sbc.from('presencas').update({ saida: e.saida.toISOString() }).eq('id', e.id), 'a saída');
+    pushDB(sbc.from('presencas').update({ saida: e.saida.toISOString() })
+      .eq('id', e.id).eq('instituicao_id', CONEXAO.orgId), 'a saída');
   return e;
 };
 
@@ -624,10 +612,11 @@ dados.encerrarLocal = function(localId){
   if(CONEXAO.ligada){
     if(antesPessoas > 0)
       pushDB(sbc.from('presencas').update({ saida:new Date().toISOString(), encerrada_auto:true })
-        .eq('unidade_id', localId).is('saida', null), 'o encerramento do dia');
+        .eq('unidade_id', localId).eq('instituicao_id', CONEXAO.orgId).is('saida', null), 'o encerramento do dia');
     if(antesEquipe > 0)
       pushDB(sbc.from('presencas_equipe').update({ saida:new Date().toISOString(), encerrada_auto:true })
-        .eq('unidade_id', localId).eq('tipo', 'presenca').is('saida', null), 'o encerramento da presença da equipe');
+        .eq('unidade_id', localId).eq('instituicao_id', CONEXAO.orgId).eq('tipo', 'presenca').is('saida', null),
+        'o encerramento da presença da equipe');
   }
   return n;
 };
@@ -653,7 +642,8 @@ dados.entrarEquipe = function(equipeId, localId, funcao){
 dados.sairEquipe = function(equipeId, localId){
   const e = demoDados.sairEquipe(equipeId, localId);
   if(CONEXAO.ligada && e)
-    pushDB(sbc.from('presencas_equipe').update({ saida: e.saida.toISOString() }).eq('id', e.id), 'a saída da equipe');
+    pushDB(sbc.from('presencas_equipe').update({ saida: e.saida.toISOString() })
+      .eq('id', e.id).eq('instituicao_id', CONEXAO.orgId), 'a saída da equipe');
   return e;
 };
 
@@ -678,7 +668,7 @@ function sincronizarPessoa(pid){
   const p = dados.pessoa(pid); if(!p) return;
   pushDB(sbc.from('pessoas').update({ nome:p.nome, apelido:p.apelido||null, nascimento:p.nasc||null,
     telefone:p.tel||null, cpf:p.cpf||null, sexo:p.sexo||null, observacao:p.obs||null, foto_url:p.foto||null })
-    .eq('id', pid), 'a edição do cadastro');
+    .eq('id', pid).eq('instituicao_id', CONEXAO.orgId), 'a edição do cadastro');
 }
 
 /* ---- funções nomeadas que gravam direto ---- */
@@ -705,7 +695,7 @@ salvarPapel = function(uid){
     Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:unid });
     pushDB(sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
       observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId, tem_acesso:temAcesso })
-      .eq('id', uid), 'a alteração do acesso');
+      .eq('id', uid).eq('instituicao_id', CONEXAO.orgId), 'a alteração do acesso');
   } else {
     const id = crypto.randomUUID();
     EQUIPE.push({ id, nome, email, papel, funcao, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()) });
@@ -732,7 +722,7 @@ salvarLocal = function(lid){
   const l = LOCAIS.find(x => x.id === lid);
   if(l){
     Object.assign(l, campos);
-    pushDB(sbc.from('unidades').update(campos).eq('id', lid), 'o local');
+    pushDB(sbc.from('unidades').update(campos).eq('id', lid).eq('instituicao_id', CONEXAO.orgId), 'o local');
   } else {
     const id = crypto.randomUUID();
     LOCAIS.push(Object.assign({ id, ativa:true }, campos));
@@ -750,12 +740,14 @@ arquivarLocal = function(lid){
   demoArquivarLocal(lid);
   const depois = (LOCAIS.find(x => x.id === lid) || {}).ativa;
   if(CONEXAO.ligada && antes !== false && depois === false)
-    pushDB(sbc.from('unidades').update({ ativa:false }).eq('id', lid), 'o arquivamento do local');
+    pushDB(sbc.from('unidades').update({ ativa:false }).eq('id', lid).eq('instituicao_id', CONEXAO.orgId),
+      'o arquivamento do local');
 };
 const demoReativarLocal = reativarLocal;
 reativarLocal = function(lid){
   demoReativarLocal(lid);
-  if(CONEXAO.ligada) pushDB(sbc.from('unidades').update({ ativa:true }).eq('id', lid), 'a reativação do local');
+  if(CONEXAO.ligada) pushDB(sbc.from('unidades').update({ ativa:true }).eq('id', lid).eq('instituicao_id', CONEXAO.orgId),
+    'a reativação do local');
 };
 
 /* ---- serviços e recursos — Fase 3b ---- */
@@ -768,7 +760,8 @@ salvarServico = function(sid){
   const s = SERVICOS.find(x => x.id === sid);
   if(s){
     Object.assign(s, { nome, cat:categoria, tipo });
-    pushDB(sbc.from('servicos').update({ nome, categoria, tipo }).eq('id', sid), 'o serviço');
+    pushDB(sbc.from('servicos').update({ nome, categoria, tipo }).eq('id', sid).eq('instituicao_id', CONEXAO.orgId),
+      'o serviço');
   } else {
     const id = crypto.randomUUID();
     SERVICOS.push({ id, nome, cat:categoria, tipo, ativo:true, ordem:SERVICOS.length });
@@ -785,12 +778,14 @@ arquivarServico = function(sid){
   demoArquivarServico(sid);
   const depois = (SERVICOS.find(x => x.id === sid) || {}).ativo;
   if(CONEXAO.ligada && antes !== false && depois === false)
-    pushDB(sbc.from('servicos').update({ ativo:false }).eq('id', sid), 'o arquivamento do serviço');
+    pushDB(sbc.from('servicos').update({ ativo:false }).eq('id', sid).eq('instituicao_id', CONEXAO.orgId),
+      'o arquivamento do serviço');
 };
 const demoReativarServico = reativarServico;
 reativarServico = function(sid){
   demoReativarServico(sid);
-  if(CONEXAO.ligada) pushDB(sbc.from('servicos').update({ ativo:true }).eq('id', sid), 'a reativação do serviço');
+  if(CONEXAO.ligada) pushDB(sbc.from('servicos').update({ ativo:true }).eq('id', sid).eq('instituicao_id', CONEXAO.orgId),
+    'a reativação do serviço');
 };
 
 const demoAdicionarFuncao = adicionarFuncao;
@@ -809,12 +804,14 @@ adicionarFuncao = function(){
 const demoArquivarFuncao = arquivarFuncao;
 arquivarFuncao = function(fid){
   demoArquivarFuncao(fid);
-  if(CONEXAO.ligada) pushDB(sbc.from('funcoes').update({ ativa:false }).eq('id', fid), 'o arquivamento da função');
+  if(CONEXAO.ligada) pushDB(sbc.from('funcoes').update({ ativa:false }).eq('id', fid).eq('instituicao_id', CONEXAO.orgId),
+    'o arquivamento da função');
 };
 const demoReativarFuncao = reativarFuncao;
 reativarFuncao = function(fid){
   demoReativarFuncao(fid);
-  if(CONEXAO.ligada) pushDB(sbc.from('funcoes').update({ ativa:true }).eq('id', fid), 'a reativação da função');
+  if(CONEXAO.ligada) pushDB(sbc.from('funcoes').update({ ativa:true }).eq('id', fid).eq('instituicao_id', CONEXAO.orgId),
+    'a reativação da função');
 };
 
 const demoDesligar = desligarEquipe;
@@ -824,13 +821,14 @@ desligarEquipe = function(uid){
   const depois = (EQUIPE.find(x => x.id === uid) || {}).status;
   if(CONEXAO.ligada && antes === 'ativo' && depois === 'inativo')
     pushDB(sbc.from('equipe').update({ ativo:false, desligado_em:new Date().toISOString(), auth_id:null })
-      .eq('id', uid), 'o desligamento');
+      .eq('id', uid).eq('instituicao_id', CONEXAO.orgId), 'o desligamento');
 };
 const demoReligar = religarEquipe;
 religarEquipe = function(uid){
   demoReligar(uid);
   if(CONEXAO.ligada)
-    pushDB(sbc.from('equipe').update({ ativo:true, desligado_em:null }).eq('id', uid), 'a reativação');
+    pushDB(sbc.from('equipe').update({ ativo:true, desligado_em:null })
+      .eq('id', uid).eq('instituicao_id', CONEXAO.orgId), 'a reativação');
 };
 
 const demoSalvarOrg = salvarOrg;
