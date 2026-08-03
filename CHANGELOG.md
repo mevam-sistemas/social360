@@ -2,6 +2,13 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.2.0 — 2026-08-03
+
+- Central regulatória pública com Termos de Uso, Aviso de Privacidade, tecnologias necessárias e retenção.
+- Identificação e canais do fornecedor conforme as regras aplicáveis ao comércio eletrônico.
+- Ciência versionada dos documentos legais na criação de novas contas.
+- Links permanentes para a documentação no site e na entrada do portal.
+
 ## 1.1.1 — 2026-08-03
 
 - Backup independente diário e manual do PostgreSQL e do Supabase Storage.

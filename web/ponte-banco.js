@@ -302,6 +302,11 @@ function abrirCadastroCompleto(){
     <label style="font-size:13px;color:#6b625a">Senha</label>
     <input id="cc-senha" type="password" minlength="10" placeholder="Mínimo 10 caracteres" autocomplete="new-password"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 14px;box-sizing:border-box">
+    <label style="display:flex;align-items:flex-start;gap:9px;font-size:12.5px;line-height:1.45;color:#4f4a45;margin:0 0 14px">
+      <input id="cc-legal" type="checkbox" style="width:18px;height:18px;flex:none;margin-top:1px">
+      <span>Li e concordo com os <a href="https://360social.com.br/legal.html#termos" target="_blank" rel="noopener">Termos de Uso</a>
+      e declaro ciência do <a href="https://360social.com.br/legal.html#privacidade" target="_blank" rel="noopener">Aviso de Privacidade</a>, versão 1.0 de 03/08/2026.</span>
+    </label>
     <button onclick="confirmarCadastroCompleto()" class="bt" style="width:100%">Criar conta e começar meu teste</button>
     <div id="cc-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
     <button onclick="fecharCadastroCompleto();abrirEntrar()" style="margin-top:14px;background:none;border:none;color:#6b625a;
@@ -339,6 +344,7 @@ async function confirmarCadastroCompleto(){
   if(!nomePessoa){ msg.textContent = 'Falta o seu nome completo.'; return; }
   if(!email.includes('@')){ msg.textContent = 'Confira o e-mail.'; return; }
   if(senha.length < 10){ msg.textContent = 'A senha precisa de pelo menos 10 caracteres.'; return; }
+  if(!document.getElementById('cc-legal').checked){ msg.textContent = 'Para criar a conta, leia e aceite os Termos de Uso e o Aviso de Privacidade.'; return; }
 
   msg.textContent = 'Criando sua conta…';
   // emailRedirectTo é essencial aqui: o projeto Supabase é compartilhado
@@ -350,7 +356,8 @@ async function confirmarCadastroCompleto(){
     email, password: senha,
     options: { data: {
       tipo_pessoa: CC_TIPO, documento: docDigitos, nome_instituicao: nomeInst,
-      nome_pessoa: nomePessoa, telefone, cidade, endereco
+      nome_pessoa: nomePessoa, telefone, cidade, endereco,
+      termos_versao: '1.0', termos_aceitos_em: new Date().toISOString()
     }, emailRedirectTo: location.origin + location.pathname }
   });
   if(signErr){
