@@ -1,0 +1,119 @@
+name: Backup independente
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-producao
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+
+    steps:
+      - name: Obter código versionado
+        uses: actions/checkout@v4
+
+      - name: Instalar ferramentas de backup
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes age postgresql-client-17 zstd
+
+      - name: Validar configuração protegida
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(SUPABASE_DB_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY BACKUP_PASSPHRASE R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET)
+          for variable in "${required[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Segredo obrigatório ausente: $variable" >&2
+              exit 1
+            fi
+          done
+
+      - name: Exportar banco e arquivos
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_dir="${RUNNER_TEMP}/social360-backup"
+          mkdir -p "$backup_dir/database" "$backup_dir/storage"
+          pg_dump --dbname="$SUPABASE_DB_URL" --format=custom --compress=9 \
+            --no-owner --no-privileges \
+            --schema=auth --schema=storage --schema=public --schema=social \
+            --file="$backup_dir/database/social360.dump"
+          STORAGE_BACKUP_DIR="$backup_dir/storage" python3 scripts/backup/export_storage.py
+          pg_restore --list "$backup_dir/database/social360.dump" > "$backup_dir/database/contents.list"
+          printf '%s\n' "$(date -u +%FT%TZ)" > "$backup_dir/created-at-utc.txt"
+          printf '%s\n' "${GITHUB_SHA}" > "$backup_dir/source-commit.txt"
+          (
+            cd "$backup_dir"
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
+
+      - name: Compactar e criptografar
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/social360-$(date -u +%F).tar.zst"
+          tar --directory="${RUNNER_TEMP}" --create --file=- social360-backup | zstd -19 -T0 > "$archive"
+          AGE_PASSPHRASE="$BACKUP_PASSPHRASE" age --passphrase --output "${archive}.age" "$archive"
+          shred --remove "$archive"
+          echo "BACKUP_FILE=${archive}.age" >> "$GITHUB_ENV"
+          echo "BACKUP_NAME=social360-$(date -u +%F).tar.zst.age" >> "$GITHUB_ENV"
+
+      - name: Enviar ao R2 e criar retenções
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          day="$(date -u +%F)"
+          aws --endpoint-url "$endpoint" s3 cp "$BACKUP_FILE" "s3://${R2_BUCKET}/daily/${day}-${BACKUP_NAME}" --only-show-errors
+          if [[ "$(date -u +%u)" == "7" ]]; then
+            aws --endpoint-url "$endpoint" s3 cp "$BACKUP_FILE" "s3://${R2_BUCKET}/weekly/${day}-${BACKUP_NAME}" --only-show-errors
+          fi
+          if [[ "$(date -u +%d)" == "01" ]]; then
+            aws --endpoint-url "$endpoint" s3 cp "$BACKUP_FILE" "s3://${R2_BUCKET}/monthly/${day}-${BACKUP_NAME}" --only-show-errors
+          fi
+          export AWS_ENDPOINT_URL="$endpoint"
+          python3 scripts/backup/prune_r2.py
+          aws --endpoint-url "$endpoint" s3api head-object --bucket "$R2_BUCKET" --key "daily/${day}-${BACKUP_NAME}" >/dev/null
+
+      - name: Resumo sem dados sensíveis
+        if: always()
+        shell: bash
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "### Backup concluído e verificado" >> "$GITHUB_STEP_SUMMARY"
+            echo "Banco, metadados e objetos do Storage foram cifrados antes do envio." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Backup falhou" >> "$GITHUB_STEP_SUMMARY"
+            echo "Nenhum segredo foi impresso; examine a etapa com falha." >> "$GITHUB_STEP_SUMMARY"
+          fi
