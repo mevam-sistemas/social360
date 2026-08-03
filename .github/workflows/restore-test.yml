@@ -102,6 +102,7 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d social360_restore -v ON_ERROR_STOP=1 <<'SQL'
           create schema if not exists auth;
           create schema if not exists social;
+          create table if not exists auth.users (id uuid primary key);
           create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
           create extension if not exists pgcrypto;
           create extension if not exists "uuid-ossp";
@@ -112,7 +113,26 @@ jobs:
           set -euo pipefail
           dump="${RUNNER_TEMP}/social360-backup/database/social360.dump"
           /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
-            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=social "$dump"
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=social --section=pre-data "$dump"
+          /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=social --section=data "$dump"
+          psql -h 127.0.0.1 -U postgres -d social360_restore -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare coluna record;
+          begin
+            for coluna in
+              select table_name, column_name from information_schema.columns
+              where table_schema = 'social' and data_type = 'uuid'
+            loop
+              execute format(
+                'insert into auth.users(id) select distinct %I from social.%I where %I is not null on conflict do nothing',
+                coluna.column_name, coluna.table_name, coluna.column_name
+              );
+            end loop;
+          end $$;
+          SQL
+          /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=social --section=post-data "$dump"
           table_count="$(psql -h 127.0.0.1 -U postgres -d social360_restore -Atc \
             "select count(*) from information_schema.tables where table_schema='social' and table_type='BASE TABLE'")"
           [[ "$table_count" -gt 0 ]] || { echo "Restauração não criou tabelas sociais" >&2; exit 1; }
