@@ -2,6 +2,13 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.2.1 — 2026-08-03
+
+- Convite automático e seguro ao conceder acesso para uma pessoa da equipe.
+- Vínculo da conta de autenticação com a ficha existente, sem criar outra instituição.
+- Troca de e-mail revoga o vínculo anterior antes de convidar a nova credencial.
+- Links de convite abrem a definição de senha dentro do 360social.
+
 ## 1.2.0 — 2026-08-03
 
 - Central regulatória pública com Termos de Uso, Aviso de Privacidade, tecnologias necessárias e retenção.
