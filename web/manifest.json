@@ -1,11 +1,12 @@
 {
   "name": "360social — Atendimento e Impacto Social",
   "short_name": "360social",
+  "id": "/",
   "description": "Atendimento, presença e indicadores de impacto social — Arbor Labs.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#FFFFFF",
   "theme_color": "#FFFFFF",
   "lang": "pt-BR",
