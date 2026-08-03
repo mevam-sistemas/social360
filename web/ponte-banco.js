@@ -454,7 +454,7 @@ async function carregarTudo(){
     destinatario_email:l.destinatario_email, destinatario_nome:l.destinatario_nome,
     enviado_em:new Date(l.enviado_em), sucesso:l.sucesso, erro:l.erro||null }));
 
-  const [pes, ats, prs, regs, pends, doas, fts, presEq, axs, locaisEstoque, obsDoacoes] = await Promise.all([
+  const [pes, ats, prs, regs, pends, doas, fts, presEq, axs, locaisEstoque, obsDoacoes, permissoesPapel] = await Promise.all([
     pega(sbc.from('pessoas').select('*').order('criada_em', { ascending:false }), 'pessoas'),
     pega(sbc.from('atendimentos').select('*, atendimento_servicos(servico_id, quantidade)').order('quando'), 'atendimentos'),
     pega(sbc.from('presencas').select('*').order('entrada'), 'presenças'),
@@ -465,8 +465,14 @@ async function carregarTudo(){
     pega(sbc.from('presencas_equipe').select('*').order('criada_em'), 'presença da equipe'),
     pega(sbc.from('anexos').select('*').order('criado_em'), 'anexos'),
     pega(sbc.from('locais_estoque').select('*').order('nome'), 'locais de armazenamento'),
-    pega(sbc.from('doacao_observacoes').select('*').order('criada_em'), 'observações das doações')
+    pega(sbc.from('doacao_observacoes').select('*').order('criada_em'), 'observações das doações'),
+    pega(sbc.from('papel_permissoes').select('papel,acao,permitido'), 'permissões dos perfis')
   ]);
+  permissoesPapel.forEach(p=>{
+    const papel=P_DB2TELA[p.papel]||p.papel, lista=PERMISSOES[papel]; if(!lista)return;
+    const i=lista.indexOf(p.acao);
+    if(p.permitido && i<0)lista.push(p.acao); else if(!p.permitido && i>=0)lista.splice(i,1);
+  });
   BD.pessoas.length = 0;
   pes.filter(p => !p.arquivada).forEach(p => BD.pessoas.push({ id:p.id, nome:p.nome,
     apelido:p.apelido||'', nasc:p.nascimento||'', tel:p.telefone||'', cpf:p.cpf||'', sexo:p.sexo||null,
@@ -528,6 +534,15 @@ async function carregarTudo(){
    Se o banco recusar, o aviso aparece e nada fica escondido.
    ============================================================ */
 const demoDados = Object.assign({}, dados);
+
+dados.definirPermissaoPapel = async function(papel,acao,permitido){
+  if(!CONEXAO.ligada)return demoDados.definirPermissaoPapel(papel,acao,permitido);
+  const r=await sbc.rpc('definir_permissao_papel',{
+    p_papel:P_TELA2DB[papel]||papel,p_acao:acao,p_permitido:permitido
+  });
+  if(r.error)throw new Error(r.error.message);
+  return r.data;
+};
 
 function proximoCodigo(){
   let prefixo = 'P-', maior = 0;

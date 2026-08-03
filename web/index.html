@@ -1393,6 +1393,7 @@ BD.locaisEstoque.push({id:'le1',nome:'Depósito principal',descricao:'',ativo:tr
 
 /* ---- consultas ---- */
 const dados = {
+  definirPermissaoPapel(papel,acao,permitido){ return { papel,acao,permitido }; },
   buscarPessoas(t){
     const q = String(t||'').toLowerCase().trim(); if(!q) return [];
     const nums = q.replace(/\D/g,'');
@@ -1582,6 +1583,20 @@ const PERMISSOES = {
    caso, por período ou por marcação de confidencialidade, muda-se uma
    linha aqui e o sistema inteiro obedece. */
 function pode(acao){ return (PERMISSOES[SESSAO.papel] || []).includes(acao); }
+function permissaoTravada(papel,acao){ return papel==='presidente' && ['config_org','gerir_equipe'].includes(acao); }
+async function alternarPermissaoPapel(papel,acao){
+  if(SESSAO.papel!=='presidente'){ alert('Somente a Presidência pode alterar as permissões dos perfis.'); return; }
+  const ativa=PERMISSOES[papel].includes(acao), novo=!ativa;
+  if(!novo && permissaoTravada(papel,acao)){
+    alert('Esta permissão da Presidência é obrigatória para evitar a perda do acesso administrativo.'); return;
+  }
+  try{
+    await Promise.resolve(dados.definirPermissaoPapel(papel,acao,novo));
+    const lista=PERMISSOES[papel], i=lista.indexOf(acao);
+    if(novo && i<0) lista.push(acao); else if(!novo && i>=0) lista.splice(i,1);
+    abrirInstituicao('equipe');
+  }catch(e){ alert(e.message||'Não foi possível alterar esta permissão.'); }
+}
 
 /* Menu curto. Quatro itens no máximo — se precisar de um quinto,
    provavelmente dois deles são a mesma coisa. */
@@ -2151,11 +2166,15 @@ function blocoEquipe(){
   </div>`;
 
   const cols = ordem;
+  const editaPermissoes=SESSAO.papel==='presidente';
   const matriz = Object.entries(ACOES).map(([a, rot]) => `<tr>
     <td style="font-weight:600">${esc(rot)}</td>
-    ${cols.map(c => `<td class="num">${PERMISSOES[c].includes(a)
-      ? '<span style="color:var(--ok);font-weight:800">●</span>'
-      : '<span style="color:var(--ln3)">—</span>'}</td>`).join('')}
+    ${cols.map(c => { const ativa=PERMISSOES[c].includes(a), trava=permissaoTravada(c,a);
+      return `<td class="num">${editaPermissoes
+        ? `<button type="button" aria-label="${ativa?'Remover':'Conceder'}: ${esc(rot)} — ${esc(ROTULO_PAPEL[c])}"
+            title="${trava?'Obrigatória para evitar perda de acesso':ativa?'Clique para remover':'Clique para conceder'}"
+            onclick="alternarPermissaoPapel('${c}','${a}')" style="border:0;background:none;padding:8px 12px;cursor:${trava?'not-allowed':'pointer'};font-size:17px;color:${ativa?'var(--ok)':'var(--ln3)'};font-weight:800">${ativa?'●':'—'}</button>`
+        : `<span style="color:${ativa?'var(--ok)':'var(--ln3)'};font-weight:800">${ativa?'●':'—'}</span>`}</td>`; }).join('')}
   </tr>`).join('');
 
   return `<div class="pn">
@@ -2174,9 +2193,9 @@ function blocoEquipe(){
 
   <div class="pn">
     <div class="ph"><h2>O que cada papel pode fazer</h2></div>
-    <div class="cx" style="padding-bottom:6px"><div class="nota">Esta tabela é a regra, não um
-      resumo dela. Quando o banco de dados entrar, cada linha vira uma política do Postgres —
-      esconder o botão não protege nada; o que protege é o servidor recusar.</div></div>
+    <div class="cx" style="padding-bottom:6px"><div class="nota">Estas permissões já são aplicadas
+      no banco de dados: além de ajustar os botões da tela, o servidor recusa qualquer operação não
+      autorizada. ${editaPermissoes?'Clique nos pontos e traços para editar cada perfil. As permissões administrativas obrigatórias da Presidência ficam travadas.':'Somente a Presidência pode editar esta matriz.'}</div></div>
     <div style="overflow-x:auto"><table class="tb" style="min-width:640px">
       <thead><tr><th style="min-width:280px">Ação</th>
         ${cols.map(c=>`<th class="num">${esc(ROTULO_PAPEL[c])}</th>`).join('')}</tr></thead>
@@ -3916,5 +3935,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=11"></script>
+<script src="ponte-banco.js?v=12"></script>
 </body></html>
