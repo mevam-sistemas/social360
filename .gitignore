@@ -5,3 +5,6 @@
 # pela interface do GitHub, ou depois de trocar o token por um com o
 # escopo certo.
 .github/workflows/checagem-basica.yml
+
+# Estado local criado pelo Supabase CLI.
+supabase/.temp/
