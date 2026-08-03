@@ -101,16 +101,34 @@ jobs:
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -d social360_restore -v ON_ERROR_STOP=1 <<'SQL'
           create schema if not exists auth;
+          create schema if not exists storage;
           create schema if not exists social;
-          create table if not exists auth.users (id uuid primary key);
+          create table if not exists auth.users (
+            id uuid primary key,
+            email text,
+            phone text,
+            raw_app_meta_data jsonb default '{}'::jsonb,
+            raw_user_meta_data jsonb default '{}'::jsonb,
+            created_at timestamptz,
+            updated_at timestamptz,
+            last_sign_in_at timestamptz,
+            email_confirmed_at timestamptz
+          );
           create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
+          create or replace function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+          create or replace function auth.role() returns text language sql stable as $$ select 'authenticated'::text $$;
+          create or replace function auth.email() returns text language sql stable as $$ select null::text $$;
           create extension if not exists pgcrypto;
           create extension if not exists "uuid-ossp";
+          alter database social360_restore set check_function_bodies = off;
           do $$
           begin
             if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
             if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
             if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin; end if;
+            if not exists (select 1 from pg_roles where rolname = 'supabase_auth_admin') then create role supabase_auth_admin nologin; end if;
+            if not exists (select 1 from pg_roles where rolname = 'supabase_storage_admin') then create role supabase_storage_admin nologin; end if;
+            if not exists (select 1 from pg_roles where rolname = 'dashboard_user') then create role dashboard_user nologin; end if;
           end $$;
           SQL
 
@@ -118,6 +136,27 @@ jobs:
         run: |
           set -euo pipefail
           dump="${RUNNER_TEMP}/social360-backup/database/social360.dump"
+          /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=public --section=pre-data "$dump"
+          /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=public --section=data "$dump"
+          psql -h 127.0.0.1 -U postgres -d social360_restore -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare coluna record;
+          begin
+            for coluna in
+              select table_schema, table_name, column_name from information_schema.columns
+              where table_schema = 'public' and data_type = 'uuid'
+            loop
+              execute format(
+                'insert into auth.users(id) select distinct %I from %I.%I where %I is not null on conflict do nothing',
+                coluna.column_name, coluna.table_schema, coluna.table_name, coluna.column_name
+              );
+            end loop;
+          end $$;
+          SQL
+          /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
+            --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=public --section=post-data "$dump"
           /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
             --dbname=social360_restore --no-owner --no-privileges --exit-on-error --schema=social --section=pre-data "$dump"
           /usr/lib/postgresql/17/bin/pg_restore --host=127.0.0.1 --username=postgres \
@@ -142,8 +181,11 @@ jobs:
           table_count="$(psql -h 127.0.0.1 -U postgres -d social360_restore -Atc \
             "select count(*) from information_schema.tables where table_schema='social' and table_type='BASE TABLE'")"
           [[ "$table_count" -gt 0 ]] || { echo "Restauração não criou tabelas sociais" >&2; exit 1; }
+          modox_table_count="$(psql -h 127.0.0.1 -U postgres -d social360_restore -Atc \
+            "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'")"
+          [[ "$modox_table_count" -gt 0 ]] || { echo "Restauração não criou tabelas do MODOX" >&2; exit 1; }
           echo "### Restauração comprovada" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checksums válidos e ${table_count} tabelas do esquema social restauradas em PostgreSQL descartável." >> "$GITHUB_STEP_SUMMARY"
+          echo "Checksums válidos; ${modox_table_count} tabelas do MODOX e ${table_count} tabelas sociais restauradas em PostgreSQL descartável." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resumo de falha
         if: failure()
