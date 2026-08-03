@@ -2,6 +2,14 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.1.1 — 2026-08-03
+
+- Backup independente diário e manual do PostgreSQL e do Supabase Storage.
+- Pacote compactado e cifrado antes do envio ao bucket privado Cloudflare R2.
+- Retenção automática de 7 cópias diárias, 4 semanais e 6 mensais.
+- Usuário PostgreSQL somente leitura e credencial R2 limitada a um único bucket.
+- Procedimento documentado de verificação e restauração trimestral.
+
 ## 1.1.0 — 2026-08-03
 
 - Navegação “Voltar” consistente, com descarte de rascunhos e mídias não publicados.

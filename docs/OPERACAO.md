@@ -26,10 +26,34 @@ Hoje o Cloudflare publica `main` diretamente. Para separar homologação e produ
 
 - O plano Pro do Supabase mantém backups diários do banco por sete dias.
 - O backup do banco não inclui arquivos do Storage.
-- Manter, além do backup gerenciado, um `pg_dump` cifrado e uma cópia cifrada dos buckets em provedor ou conta independente.
-- Política inicial: diário por 30 dias, semanal por 12 semanas e mensal por 12 meses.
+- O workflow `Backup independente` executa diariamente às 00h30 de Brasília e também pode ser iniciado manualmente.
+- O arquivo contém `pg_dump`, todos os buckets do Storage, manifesto de conteúdo e checksums SHA-256.
+- O pacote é comprimido e cifrado com `age` antes de ser enviado ao bucket privado no Cloudflare R2.
+- Política gratuita inicial: 7 diários, 4 semanais e 6 mensais. A retenção deve ser ampliada quando houver orçamento ou obrigação regulatória.
 - Testar restauração trimestralmente; backup sem teste de restauração não é evidência de recuperação.
 - Definir RPO de 24 horas com backup diário ou habilitar PITR para reduzir o RPO.
+
+### Segredos da automação
+
+Os valores ficam somente em **GitHub → Settings → Secrets and variables → Actions**:
+
+- `SUPABASE_DB_URL`: conexão direta/pooler com permissão de exportação.
+- `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`: leitura administrativa dos buckets.
+- `BACKUP_PASSPHRASE`: frase longa e exclusiva para cifrar os pacotes.
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` e `R2_BUCKET`: destino privado e independente.
+
+Nunca registrar esses valores em issue, commit, log ou documentação. A frase de restauração deve ter uma segunda cópia em cofre de senhas controlado pela direção.
+
+### Restauração
+
+1. Baixar o arquivo `.tar.zst.age` do bucket privado.
+2. Decifrar: `AGE_PASSPHRASE='...' age --decrypt --output backup.tar.zst arquivo.age`.
+3. Extrair: `zstd --decompress --stdout backup.tar.zst | tar --extract`.
+4. Validar `SHA256SUMS` antes de restaurar.
+5. Restaurar primeiro em um projeto Supabase isolado de homologação usando `pg_restore`; nunca testar diretamente em produção.
+6. Recriar os buckets e enviar os objetos preservando os caminhos registrados.
+
+Faça um ensaio trimestral e registre duração, responsável e resultado. A credencial `service_role` e a senha do banco devem ser rotacionadas se aparecerem em qualquer log ou arquivo não cifrado.
 
 ## Antes de cada implantação
 
