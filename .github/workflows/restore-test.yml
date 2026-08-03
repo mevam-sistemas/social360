@@ -101,6 +101,7 @@ jobs:
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -d social360_restore -v ON_ERROR_STOP=1 <<'SQL'
           create schema if not exists auth;
+          create schema if not exists social;
           create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
           create extension if not exists pgcrypto;
           create extension if not exists "uuid-ossp";
