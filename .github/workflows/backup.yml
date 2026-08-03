@@ -61,12 +61,12 @@ jobs:
           set -euo pipefail
           backup_dir="${RUNNER_TEMP}/social360-backup"
           mkdir -p "$backup_dir/database" "$backup_dir/storage"
-          pg_dump --dbname="$SUPABASE_DB_URL" --format=custom --compress=9 \
+          /usr/lib/postgresql/17/bin/pg_dump --dbname="$SUPABASE_DB_URL" --format=custom --compress=9 \
             --no-owner --no-privileges \
             --schema=auth --schema=storage --schema=public --schema=social \
             --file="$backup_dir/database/social360.dump"
           STORAGE_BACKUP_DIR="$backup_dir/storage" python3 scripts/backup/export_storage.py
-          pg_restore --list "$backup_dir/database/social360.dump" > "$backup_dir/database/contents.list"
+          /usr/lib/postgresql/17/bin/pg_restore --list "$backup_dir/database/social360.dump" > "$backup_dir/database/contents.list"
           printf '%s\n' "$(date -u +%FT%TZ)" > "$backup_dir/created-at-utc.txt"
           printf '%s\n' "${GITHUB_SHA}" > "$backup_dir/source-commit.txt"
           (
