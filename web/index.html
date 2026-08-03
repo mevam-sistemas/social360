@@ -746,6 +746,20 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
           <div class="par"><div class="cp"><label>Cidade</label><input id="cad-cidade"></div>
             <div class="cp"><label>Estado</label><input id="cad-estado" maxlength="2" placeholder="SC" style="text-transform:uppercase"></div></div>
         </div></div>
+        <div class="pn"><div class="ph"><h2>Documentos e anexos <span class="op">— opcional</span></h2></div><div class="cx">
+          <div class="nota">Fotografe ou anexe apenas o que for útil ao atendimento: documento de identidade,
+            declaração, receita, encaminhamento ou comprovante. A ausência de documentos nunca impede o cadastro.</div>
+          <div class="par" style="margin-top:14px"><div class="cp"><label>Tipo do próximo anexo</label>
+            <select id="cad-doc-tipo"><option>RG (foto)</option><option>CPF (foto)</option>
+              <option>Comprovante de residência</option><option>Receita médica</option><option>Encaminhamento CRAS</option>
+              <option>Declaração</option><option>Laudo</option><option>Ficha de acolhimento</option><option>Outro documento</option></select></div>
+            <div class="cp"><label>Descrição <span class="op">— opcional</span></label><input id="cad-doc-desc" placeholder="Ex.: declaração emitida pelo CRAS"></div></div>
+          <input type="file" id="cad-doc-camera" accept="image/*" capture="environment" style="display:none" onchange="pegarDocsCadastro(this)">
+          <input type="file" id="cad-doc-arq" accept="image/*,application/pdf" multiple style="display:none" onchange="pegarDocsCadastro(this)">
+          <div class="linha"><button class="bt g" onclick="$('cad-doc-camera').click()">Fotografar documento</button>
+            <button class="bt g" onclick="$('cad-doc-arq').click()">Escolher imagens ou PDF</button></div>
+          <div class="anxs" id="cad-docs" style="margin-top:14px"></div>
+        </div></div>
         <div class="nota err" id="cad-msg" style="display:none"></div>
       </section>
 
@@ -1484,8 +1498,11 @@ const dados = {
       criado:new Date(), apelido:'', nasc:'', tel:'', cpf:'', rg:'', rgOrgao:'', rgUf:'', semDocumentos:false,
       situacaoRua:null, cep:'', logradouro:'', numero:'', complemento:'', bairro:'', cidade:'', estado:'', referenciaEndereco:'',
       foto:null, fotoPath:null, obs:'', docs:[] }, p);
+    novo.docs=(novo.docs||[]).map(d=>Object.assign({},d,{quando:new Date(),quem:SESSAO.nome}));
     BD.pessoas.unshift(novo); return novo;
   },
+  adicionarDocumentoPessoa(id,doc){ const p=BD.pessoas.find(x=>x.id===id); if(!p)return null;
+    const n=Object.assign({id:'doc'+Date.now(),quando:new Date(),quem:SESSAO.nome},doc); p.docs.push(n); return n; },
   criarAtendimento(a){
     const novo = Object.assign({ id:'a'+(BD.atend.length+1), quando:new Date(),
       operador: SESSAO.nome, anexos:[], localDescricao:'', quantidades:{} }, a);
@@ -1552,7 +1569,8 @@ const PAPEIS = {
 let SESSAO = Object.assign({ papel:'operador' }, PAPEIS.operador);
 let ctx = { pessoa:null, servs:[], servsQtd:{}, anexos:[], foto:null, retorno:false, local:'l1',
   formPE:null, formPEModo:'entrada', histLocal:null, histDe:'', histAte:'',
-  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, doModo:'hoje', listaGestao:null };
+  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, docsCadastro:[], docPessoaAlvo:null,
+  doModo:'hoje', listaGestao:null };
 let tela = 'atender';
 
 /* ============================================================
@@ -3110,7 +3128,7 @@ function painelHistoricoLocal(l){
    ============================================================ */
 function novoCadastro(){
   if(fluxoCam){ fluxoCam.getTracks().forEach(t=>t.stop()); fluxoCam=null; }
-  ctx.foto = null;
+  ctx.foto = null; ctx.docsCadastro=[]; ctx.docPessoaAlvo=null;
   ['cad-nome','cad-apelido','cad-nasc','cad-tel','cad-cpf','cad-rg','cad-rg-orgao','cad-rg-uf','cad-sexo','cad-obs',
    'cad-moradia','cad-cep','cad-logradouro','cad-numero','cad-complemento','cad-bairro','cad-cidade','cad-estado','cad-referencia']
     .forEach(i => { if($(i)) $(i).value=''; });
@@ -3119,10 +3137,42 @@ function novoCadastro(){
   if(q && !/^\d+$/.test(q.replace(/\D/g,''))) $('cad-nome').value = q;
   $('cad-dup').innerHTML=''; $('cad-msg').style.display='none';
   fotoCad();
+  docsCadastroUI();
   $('cad-passos').innerHTML = passos(0, ['Cadastrar','Escolher serviços','Confirmar']);
   ir('cadastro');
   acao('Novo cadastro','Preencha ao menos o nome','Salvar e atender',()=>salvarCadastro(false),
     'Só salvar',()=>salvarCadastro(true));
+}
+function lerDataUrl(file){ return new Promise((res,rej)=>{ const l=new FileReader(); l.onload=()=>res(l.result); l.onerror=()=>rej(new Error('O arquivo não pôde ser lido.')); l.readAsDataURL(file); }); }
+async function prepararDocumentoPessoa(file,tipo,descricao){
+  if(file.size>5*1024*1024)throw new Error(`${file.name}: o limite é 5 MB.`);
+  if(/^image\//.test(file.type))return {tipo,nome:file.name,mime:'image/webp',url:await prepararFotoPessoa(file),descricao};
+  if(file.type==='application/pdf')return {tipo,nome:file.name,mime:'application/pdf',url:await lerDataUrl(file),descricao};
+  throw new Error(`${file.name}: escolha uma imagem ou PDF.`);
+}
+async function pegarDocsCadastro(inp){
+  const tipo=ctx.docPessoaAlvo?.tipo||$('cad-doc-tipo').value, descricao=ctx.docPessoaAlvo?.descricao||$('cad-doc-desc').value.trim();
+  const alvo=ctx.docPessoaAlvo; inp.disabled=true;
+  try{
+    for(const file of [...inp.files]){
+      const doc=await prepararDocumentoPessoa(file,tipo,descricao);
+      if(alvo)await Promise.resolve(dados.adicionarDocumentoPessoa(alvo.id,doc)); else ctx.docsCadastro.push(doc);
+    }
+    if(alvo){ ctx.docPessoaAlvo=null; abrirPessoa(alvo.id,'Documento adicionado ao cadastro.'); }
+    else docsCadastroUI();
+  }catch(e){ alert(e.message); ctx.docPessoaAlvo=null; }
+  finally{ inp.value=''; inp.disabled=false; }
+}
+function docsCadastroUI(){ const el=$('cad-docs'); if(!el)return;
+  el.innerHTML=ctx.docsCadastro.map((d,i)=>`<div class="anx" style="width:112px;height:auto;min-height:92px;padding-bottom:6px">
+    ${d.mime==='image/webp'?`<img src="${d.url}" alt="">`:`<div class="rot">PDF</div>`}
+    <div style="font-size:10px;padding:4px;line-height:1.2">${esc(d.tipo)}</div>
+    <button class="x" onclick="ctx.docsCadastro.splice(${i},1);docsCadastroUI()">×</button></div>`).join(''); }
+function adicionarDocumentoPosterior(pid,camera){
+  const tipo=prompt('Tipo do documento (ex.: RG, declaração, receita médica)'); if(!tipo||!tipo.trim())return;
+  const descricao=prompt('Descrição ou observação (opcional)')||'';
+  ctx.docPessoaAlvo={id:pid,tipo:tipo.trim(),descricao:descricao.trim()};
+  $(camera?'cad-doc-camera':'cad-doc-arq').click();
 }
 function fotoCad(){
   $('cad-foto-cx').innerHTML = ctx.foto
@@ -3196,7 +3246,7 @@ async function salvarCadastro(so){
     situacaoRua:moradia==='rua'?true:moradia==='endereco'?false:null, cep:$('cad-cep').value.replace(/\D/g,''),
     logradouro:$('cad-logradouro').value.trim(), numero:$('cad-numero').value.trim(), complemento:$('cad-complemento').value.trim(),
     bairro:$('cad-bairro').value.trim(), cidade:$('cad-cidade').value.trim(), estado:$('cad-estado').value.trim().toUpperCase(),
-    referenciaEndereco:$('cad-referencia').value.trim() }));
+    referenciaEndereco:$('cad-referencia').value.trim(), docs:[...ctx.docsCadastro] }));
     if(so) abrirPessoa(p.id, 'Cadastro criado.'); else irRegistrar(p.id);
   }catch(e){ const m=$('cad-msg'); m.className='nota err'; m.textContent=e.message||'Não foi possível criar o cadastro.'; m.style.display=''; }
 }
@@ -3417,13 +3467,16 @@ function item(e){
 function dadosPessoa(p){
   const l = (r,v) => `<tr><td style="width:210px;color:var(--tx3);font-size:13px;font-weight:650">${r}</td>
     <td style="font-weight:600">${v||'—'}</td></tr>`;
-  const docs = p.docs && p.docs.length ? `<div class="pn"><div class="ph"><h2>Documentos anexados</h2>
-    <span class="sp"></span><span class="n">${p.docs.length}</span></div>
-    ${p.docs.map(d => `<div class="dentro" style="cursor:default">
-      <div class="in" style="background:var(--az)">DOC</div>
-      <div class="t"><b>${esc(d.tipo)}</b><small>enviado por ${esc(d.quem)} em ${
-        new Date(d.quando).toLocaleDateString('pt-BR')}</small></div>
-      <span class="et az">arquivo</span></div>`).join('')}</div>` : '';
+  const listaDocs=p.docs||[];
+  const docs = `<div class="pn"><div class="ph"><h2>Documentos e anexos</h2>
+    <span class="sp"></span><span class="n">${listaDocs.length}</span></div>
+    ${listaDocs.map(d => `<a class="dentro" href="${d.url}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+      ${d.mime==='image/webp'||d.tipoArquivo==='img'?`<img src="${d.url}" style="width:44px;height:44px;object-fit:cover;border-radius:9px" alt="">`:`<div class="in" style="background:var(--az)">PDF</div>`}
+      <div class="t"><b>${esc(d.tipo)}</b><small>${d.descricao?esc(d.descricao)+' · ':''}enviado por ${esc(d.quem||'—')} em ${new Date(d.quando).toLocaleString('pt-BR')}</small></div>
+      <span class="et az">abrir</span></a>`).join('') || '<div class="nada"><b>Nenhum documento anexado</b><p>O cadastro continua válido mesmo sem documentos.</p></div>'}
+    ${(pode('editar_pessoa')||pode('criar_pessoa'))?`<div class="cx" style="border-top:1px solid var(--ln2)"><div class="linha">
+      <button class="bt g" onclick="adicionarDocumentoPosterior('${p.id}',true)">Fotografar documento</button>
+      <button class="bt g" onclick="adicionarDocumentoPosterior('${p.id}',false)">Anexar imagem ou PDF</button></div></div>`:''}</div>`;
   return `<div class="pn"><table class="tb"><tbody style="cursor:default">
     ${l('Nome completo', esc(p.nome))}${l('Como preferem chamar', esc(p.apelido))}
     ${l('Código', `<span style="font-family:var(--mono)">${esc(p.codigo)}</span>`)}
@@ -4026,5 +4079,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=13"></script>
+<script src="ponte-banco.js?v=14"></script>
 </body></html>

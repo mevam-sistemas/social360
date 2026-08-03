@@ -482,6 +482,11 @@ async function carregarTudo(){
     (assinadas||[]).forEach(x=>{ if(x.signedUrl)urlsFoto.set(x.path,x.signedUrl); });
   }
   const urlFoto=u=>urlsFoto.get(u)||u||null;
+  const anexosPessoa=axs.filter(x=>x.pessoa_id&&!x.atendimento_id&&!x.doacao_id);
+  const caminhosDocs=[...new Set(anexosPessoa.map(x=>x.url).filter(Boolean))], urlsDocs=new Map();
+  if(caminhosDocs.length){ const {data:assinados,error:erroDocs}=await sbc.storage.from('documentos-pessoas').createSignedUrls(caminhosDocs,3600);
+    if(erroDocs)console.error('[banco] assinar documentos',erroDocs);
+    (assinados||[]).forEach(x=>{if(x.signedUrl)urlsDocs.set(x.path,x.signedUrl);}); }
   BD.pessoas.length = 0;
   pes.filter(p => !p.arquivada).forEach(p => BD.pessoas.push({ id:p.id, nome:p.nome,
     apelido:p.apelido||'', nasc:p.nascimento||'', tel:p.telefone||'', cpf:p.cpf||'', sexo:p.sexo||null,
@@ -490,6 +495,9 @@ async function carregarTudo(){
     complemento:p.complemento||'', bairro:p.bairro||'', cidade:p.cidade||'', estado:p.estado||'',
     referenciaEndereco:p.referencia_endereco||'', codigo:p.codigo, foto:urlFoto(p.foto_url), fotoPath:p.foto_url||null,
     criado:new Date(p.criada_em), obs:p.observacao||'', docs:[] }));
+  anexosPessoa.forEach(x=>{ const p=BD.pessoas.find(y=>y.id===x.pessoa_id); if(p)p.docs.push({id:x.id,tipo:x.categoria||'Documento',
+    nome:x.nome||'',descricao:x.descricao||'',mime:x.tipo||'',tipoArquivo:/^image\//.test(x.tipo)?'img':'pdf',
+    path:x.url,url:urlsDocs.get(x.url)||'',quando:new Date(x.criado_em),quem:nomeDe(x.criado_por)}); });
   BD.atend.length = 0;
   ats.forEach(a => {
     const quantidades = {};
@@ -576,6 +584,17 @@ async function salvarArquivoFotoPessoa(dataUrl,pessoaId){
   if(error)throw new Error('A foto foi enviada, mas não pôde ser aberta.');
   return {path:caminho,url:data.signedUrl};
 }
+async function salvarArquivoDocumentoPessoa(doc,pessoaId){
+  const ext=doc.mime==='application/pdf'?'pdf':'webp';
+  const caminho=`${CONEXAO.orgId}/${pessoaId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const arquivo=blobDeDataUrl(doc.url);
+  const {error:envioErro}=await sbc.storage.from('documentos-pessoas').upload(caminho,arquivo,
+    {contentType:doc.mime,cacheControl:'3600',upsert:false});
+  if(envioErro)throw new Error('Não foi possível enviar '+doc.nome+': '+envioErro.message);
+  const {data,error}=await sbc.storage.from('documentos-pessoas').createSignedUrl(caminho,3600);
+  if(error)throw new Error('O documento foi enviado, mas não pôde ser aberto.');
+  return Object.assign({},doc,{id:crypto.randomUUID(),path:caminho,url:data.signedUrl,quando:new Date(),quem:SESSAO.nome});
+}
 
 dados.criarPessoa = async function(p){
   if(!CONEXAO.ligada) return demoDados.criarPessoa(p);
@@ -586,6 +605,8 @@ dados.criarPessoa = async function(p){
     referenciaEndereco:'', foto:null, fotoPath:null, obs:'', docs:[] }, p, { id });
   novo.codigo = novo.codigo || proximoCodigo();
   if(novo.foto){ const salva=await salvarArquivoFotoPessoa(novo.foto,id); novo.foto=salva.url; novo.fotoPath=salva.path; }
+  const docsSalvos=[];
+  for(const doc of (novo.docs||[]))docsSalvos.push(await salvarArquivoDocumentoPessoa(doc,id));
   const { error }=await sbc.from('pessoas').insert({ id, instituicao_id:CONEXAO.orgId, codigo:novo.codigo,
     nome:novo.nome, apelido:novo.apelido||null, nascimento:novo.nasc||null,
     telefone:novo.tel||null, cpf:novo.cpf||null, sexo:novo.sexo||null, observacao:novo.obs||null,
@@ -594,10 +615,23 @@ dados.criarPessoa = async function(p){
     complemento:novo.complemento||null,bairro:novo.bairro||null,cidade:novo.cidade||null,estado:novo.estado||null,
     referencia_endereco:novo.referenciaEndereco||null,foto_url:novo.fotoPath||null, criada_por:CONEXAO.eu.id });
   if(error)throw new Error('Não foi possível salvar o cadastro: '+error.message);
+  novo.docs=docsSalvos;
   BD.pessoas.unshift(novo);
   if(novo.fotoPath){ const f={id:crypto.randomUUID(),pessoa:id,url:novo.foto,path:novo.fotoPath,quando:new Date(),quem:SESSAO.nome,motivo:'Foto do cadastro inicial'};
     BD.fotos.push(f); pushDB(sbc.from('fotos_pessoa').insert({id:f.id,instituicao_id:CONEXAO.orgId,pessoa_id:id,url:novo.fotoPath,motivo:f.motivo,criada_por:CONEXAO.eu.id}),'o histórico de foto'); }
+  if(docsSalvos.length){ const {error:erroDocs}=await sbc.from('anexos').insert(docsSalvos.map(d=>({id:d.id,instituicao_id:CONEXAO.orgId,
+    pessoa_id:id,tipo:d.mime,url:d.path,nome:d.nome||null,categoria:d.tipo||null,descricao:d.descricao||null,criado_por:CONEXAO.eu.id})));
+    if(erroDocs){ console.error('[banco] vincular documentos',erroDocs); novo.docs=[]; avisoDB('os documentos do cadastro'); } }
   return novo;
+};
+
+dados.adicionarDocumentoPessoa=async function(id,doc){
+  if(!CONEXAO.ligada)return demoDados.adicionarDocumentoPessoa(id,doc);
+  const salvo=await salvarArquivoDocumentoPessoa(doc,id);
+  const {error}=await sbc.from('anexos').insert({id:salvo.id,instituicao_id:CONEXAO.orgId,pessoa_id:id,
+    tipo:salvo.mime,url:salvo.path,nome:salvo.nome||null,categoria:salvo.tipo||null,descricao:salvo.descricao||null,criado_por:CONEXAO.eu.id});
+  if(error)throw new Error('Não foi possível vincular o documento: '+error.message);
+  const p=BD.pessoas.find(x=>x.id===id); if(p)p.docs.push(salvo); return salvo;
 };
 
 dados.criarAtendimento = function(a){
