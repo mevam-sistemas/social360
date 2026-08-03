@@ -54,7 +54,7 @@ function pushDB(q, oQue){
 }
 
 /* ============================================================
-   ENTRAR — clientes já cadastrados (recuperação v8, 03/08/2026). Padrão Arbor Labs: só
+   ENTRAR — clientes já cadastrados (logo v10, 03/08/2026). Padrão Arbor Labs: só
    e-mail + senha, sem código por e-mail. Quem esquece a senha pede um link
    de redefinição (abaixo) — isso não é o mesmo que o código de login que
    foi removido, é só uma forma de recuperar acesso à própria conta.
