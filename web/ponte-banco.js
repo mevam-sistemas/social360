@@ -495,9 +495,12 @@ async function carregarTudo(){
   const urlFoto=u=>urlsFoto.get(u)||u||null;
   const caminhosDir=[...new Set(dirs.map(d=>d.anexo_url).filter(Boolean))],urlsDir=new Map();
   if(caminhosDir.length){const {data}=await sbc.storage.from('diretivas').createSignedUrls(caminhosDir,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsDir.set(x.path,x.signedUrl);});}
+  const caminhosAudio=[...new Set(dirs.map(d=>d.audio_url).filter(Boolean))],urlsAudio=new Map();
+  if(caminhosAudio.length){const {data}=await sbc.storage.from('diretivas-audios').createSignedUrls(caminhosAudio,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsAudio.set(x.path,x.signedUrl);});}
   BD.diretivas.length=0;
   dirs.forEach(d=>{const meu=dirDest.find(x=>x.diretiva_id===d.id&&x.equipe_id===CONEXAO.eu.id);BD.diretivas.push({id:d.id,titulo:d.titulo,texto:d.texto,prioridade:d.prioridade,destino:d.destino,
-    anexo:urlsDir.get(d.anexo_url)||null,anexoPath:d.anexo_url||null,autor:nomeDe(d.criada_por),quando:new Date(d.criada_em),lida:!!meu?.lida_em,ciente:!!meu?.ciente_em,
+    anexo:urlsDir.get(d.anexo_url)||null,anexoPath:d.anexo_url||null,audio:urlsAudio.get(d.audio_url)||null,audioPath:d.audio_url||null,audioMime:d.audio_mime||null,audioDuracao:d.audio_duracao_seg||null,autor:nomeDe(d.criada_por),quando:new Date(d.criada_em),lida:!!meu?.lida_em,ciente:!!meu?.ciente_em,
+    audicoes:dirDest.filter(x=>x.diretiva_id===d.id&&x.audio_ouvido_em).map(x=>({equipe:nomeDe(x.equipe_id),quando:new Date(x.audio_ouvido_em)})),
     comentarios:dirCom.filter(c=>c.diretiva_id===d.id).map(c=>({id:c.id,texto:c.texto,quem:nomeDe(c.equipe_id),quando:new Date(c.criada_em)}))});});
   if(typeof atualizarBadgeDiretivas==='function')atualizarBadgeDiretivas();
   const anexosPessoa=axs.filter(x=>x.pessoa_id&&!x.atendimento_id&&!x.doacao_id);
@@ -576,14 +579,16 @@ const demoDados = Object.assign({}, dados);
 
 dados.criarDiretiva=async function(d){
   if(!CONEXAO.ligada)return demoDados.criarDiretiva(d);
-  let path=null,url=null;
+  let path=null,url=null,audioPath=null,audioUrl=null;
   if(d.anexo){path=`${CONEXAO.orgId}/${Date.now()}-${crypto.randomUUID()}.webp`;const {error}=await sbc.storage.from('diretivas').upload(path,blobDeDataUrl(d.anexo),{contentType:'image/webp'});if(error)throw error;const s=await sbc.storage.from('diretivas').createSignedUrl(path,3600);url=s.data?.signedUrl||null;}
-  const r=await sbc.rpc('criar_diretiva',{p_titulo:d.titulo,p_texto:d.texto,p_prioridade:d.prioridade,p_destino:d.destino,p_anexo_url:path});if(r.error)throw new Error(r.error.message);
-  const n={id:r.data,titulo:d.titulo,texto:d.texto,prioridade:d.prioridade,destino:d.destino,anexo:url,anexoPath:path,autor:SESSAO.nome,quando:new Date(),lida:true,ciente:false,comentarios:[]};BD.diretivas.unshift(n);
+  if(d.audio){const ext=d.audio.mime.includes('mp4')?'m4a':d.audio.mime.includes('ogg')?'ogg':'webm';audioPath=`${CONEXAO.orgId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;const up=await sbc.storage.from('diretivas-audios').upload(audioPath,d.audio.blob,{contentType:d.audio.mime});if(up.error)throw new Error(up.error.message);const s=await sbc.storage.from('diretivas-audios').createSignedUrl(audioPath,3600);audioUrl=s.data?.signedUrl||d.audio.url;}
+  const r=await sbc.rpc('criar_diretiva',{p_titulo:d.titulo,p_texto:d.texto,p_prioridade:d.prioridade,p_destino:d.destino,p_anexo_url:path,p_audio_url:audioPath,p_audio_mime:d.audio?.mime||null,p_audio_duracao_seg:d.audio?.duracao||null});if(r.error)throw new Error(r.error.message);
+  const n={id:r.data,titulo:d.titulo,texto:d.texto,prioridade:d.prioridade,destino:d.destino,anexo:url,anexoPath:path,audio:audioUrl,audioPath,audioMime:d.audio?.mime||null,audioDuracao:d.audio?.duracao||null,autor:SESSAO.nome,quando:new Date(),lida:true,ciente:false,comentarios:[],audicoes:[]};BD.diretivas.unshift(n);
   sbc.functions.invoke('enviar-diretiva-push',{body:{diretiva_id:r.data}}).catch(e=>console.error('[push]',e)); return n;
 };
 dados.marcarDiretiva=async function(id,ciente){if(!CONEXAO.ligada)return demoDados.marcarDiretiva(id,ciente);const r=await sbc.rpc('marcar_diretiva',{p_id:id,p_ciente:!!ciente});if(r.error)throw new Error(r.error.message);const d=BD.diretivas.find(x=>x.id===id);if(d){d.lida=true;if(ciente)d.ciente=true;}return d;};
 dados.comentarDiretiva=async function(id,texto){if(!CONEXAO.ligada)return demoDados.comentarDiretiva(id,texto);const r=await sbc.rpc('comentar_diretiva',{p_id:id,p_texto:texto});if(r.error)throw new Error(r.error.message);const c={id:r.data,texto,quem:SESSAO.nome,quando:new Date()};const d=BD.diretivas.find(x=>x.id===id);if(d)d.comentarios.push(c);return c;};
+dados.registrarAudicaoDiretiva=async function(id){if(!CONEXAO.ligada)return demoDados.registrarAudicaoDiretiva(id);const r=await sbc.rpc('registrar_audicao_diretiva',{p_id:id});if(r.error)throw new Error(r.error.message);const d=BD.diretivas.find(x=>x.id===id);if(d){d.audicoes=d.audicoes||[];if(!d.audicoes.some(a=>a.equipe===SESSAO.nome))d.audicoes.push({equipe:SESSAO.nome,quando:new Date(r.data)});}return d;};
 
 dados.definirPermissaoPapel = async function(papel,acao,permitido){
   if(!CONEXAO.ligada)return demoDados.definirPermissaoPapel(papel,acao,permitido);

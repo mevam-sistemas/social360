@@ -1430,9 +1430,10 @@ BD.locaisEstoque.push({id:'le1',nome:'Depósito principal',descricao:'',ativo:tr
 /* ---- consultas ---- */
 const dados = {
   definirPermissaoPapel(papel,acao,permitido){ return { papel,acao,permitido }; },
-  criarDiretiva(d){ const n=Object.assign({id:'dir'+Date.now(),quando:new Date(),autor:SESSAO.nome,lida:true,ciente:false,comentarios:[]},d); BD.diretivas.unshift(n); return n; },
+  criarDiretiva(d){ const n=Object.assign({id:'dir'+Date.now(),quando:new Date(),autor:SESSAO.nome,lida:true,ciente:false,comentarios:[],audicoes:[]},d,{audio:d.audio?.url||null}); BD.diretivas.unshift(n); return n; },
   marcarDiretiva(id,ciente){ const d=BD.diretivas.find(x=>x.id===id); if(d){d.lida=true;if(ciente)d.ciente=true;} return d; },
   comentarDiretiva(id,texto){ const d=BD.diretivas.find(x=>x.id===id); if(!d)return null; const c={id:'dc'+Date.now(),texto,quem:SESSAO.nome,quando:new Date()}; d.comentarios.push(c); return c; },
+  registrarAudicaoDiretiva(id){ const d=BD.diretivas.find(x=>x.id===id); if(!d)return null; d.audicoes=d.audicoes||[]; if(!d.audicoes.some(a=>a.equipe===SESSAO.nome))d.audicoes.push({equipe:SESSAO.nome,quando:new Date()}); return d; },
   buscarPessoas(t){
     const q = String(t||'').toLowerCase().trim(); if(!q) return [];
     const nums = q.replace(/\D/g,'');
@@ -1578,7 +1579,7 @@ const PAPEIS = {
 let SESSAO = Object.assign({ papel:'operador' }, PAPEIS.operador);
 let ctx = { pessoa:null, servs:[], servsQtd:{}, anexos:[], foto:null, retorno:false, local:'l1',
   formPE:null, formPEModo:'entrada', histLocal:null, histDe:'', histAte:'',
-  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, docsCadastro:[], docPessoaAlvo:null, imagemDiretiva:null,
+  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, docsCadastro:[], docPessoaAlvo:null, imagemDiretiva:null, audioDiretiva:null,
   doModo:'hoje', listaGestao:null };
 let tela = 'atender';
 
@@ -3676,6 +3677,7 @@ function montarListaGestao(){
    ============================================================ */
 function podePublicarDiretiva(){ return ['presidente','coordenador','social'].includes(SESSAO.papel); }
 function atualizarBadgeDiretivas(){ const n=BD.diretivas.filter(d=>!d.lida).length, el=$('dir-n'); if(el)el.textContent=n; }
+let gravadorDiretiva=null,partesAudioDiretiva=[],timerAudioDiretiva=null,inicioAudioDiretiva=0,streamAudioDiretiva=null;
 function abrirDiretivas(){
   const notificacoes=`<div class="pn"><div class="cx"><div class="linha"><div class="t"><b>Notificações neste aparelho</b><small>Receba orientações mesmo com o aplicativo fechado.</small></div><span class="sp"></span><button class="bt g" onclick="ativarPushUI()">Ativar notificações</button></div></div></div>`;
   const form=podePublicarDiretiva()?`<div class="pn"><div class="ph"><h2>Nova orientação</h2></div><div class="cx">
@@ -3683,10 +3685,14 @@ function abrirDiretivas(){
     <div class="cp"><label>Tipo</label><select id="dir-prioridade"><option value="recomendacao">Recomendação</option><option value="ordem_dia">Ordem do dia</option><option value="urgente">Urgente</option></select></div></div>
     <div class="cp"><label>Orientação <span class="op">— até 300 caracteres</span></label><textarea id="dir-texto" maxlength="300" rows="4" oninput="$('dir-resta').textContent=300-this.value.length"></textarea><div class="ajuda"><span id="dir-resta">300</span> caracteres restantes</div></div>
     <div class="cp"><label>Destinatários</label><select id="dir-destino"><option value="todos">Toda a equipe ativa</option><option value="escala_hoje">Somente a equipe presente na escala de hoje</option></select></div>
-    <div class="linha"><button class="bt g" onclick="$('dir-img').click()">Anexar imagem</button><span id="dir-img-nome" class="sub"></span><button class="bt" onclick="publicarDiretiva()">Publicar orientação</button></div>
+    <div class="linha"><button class="bt g" onclick="$('dir-img').click()">Anexar imagem</button><span id="dir-img-nome" class="sub"></span>
+      <button id="dir-audio-bt" class="bt g" onclick="alternarGravacaoDiretiva()">Gravar áudio</button><span id="dir-audio-tempo" class="sub">até 2 min</span><button class="bt" onclick="publicarDiretiva()">Publicar orientação</button></div>
+    <div id="dir-audio-prev" style="margin-top:10px"></div>
   </div></div>`:'';
   const lista=BD.diretivas.map(d=>`<div class="pn"><div class="cx"><div class="linha"><span class="et ${d.prioridade==='urgente'?'rx':d.prioridade==='ordem_dia'?'av':'az'}">${d.prioridade==='urgente'?'Urgente':d.prioridade==='ordem_dia'?'Ordem do dia':'Recomendação'}</span><b>${esc(d.titulo)}</b><span class="sp"></span><span class="hr">${d.quando.toLocaleString('pt-BR')}</span></div>
     <p style="font-size:14.5px;line-height:1.6;white-space:pre-wrap">${esc(d.texto)}</p>${d.anexo?`<a href="${d.anexo}" target="_blank" rel="noopener"><img src="${d.anexo}" style="max-width:260px;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--ln)"></a>`:''}
+    ${d.audio?`<div style="margin:12px 0"><audio controls preload="metadata" src="${esc(d.audio)}" onplay="registrarAudicaoDiretiva('${d.id}')" style="width:min(100%,420px)"></audio><div class="ajuda">Áudio de até 2 minutos</div></div>`:''}
+    ${(d.audicoes||[]).length?`<details style="margin:8px 0"><summary class="quem">Ouvido por ${(d.audicoes||[]).length} ${(d.audicoes||[]).length===1?'pessoa':'pessoas'}</summary>${d.audicoes.map(a=>`<div class="quem">${esc(a.equipe)} · ${a.quando.toLocaleString('pt-BR')}</div>`).join('')}</details>`:''}
     <div class="quem">Por ${esc(d.autor)} · ${d.destino==='escala_hoje'?'escala de hoje':'toda a equipe'}</div>
     ${(d.comentarios||[]).map(c=>`<div class="obs">${esc(c.texto)}<div class="quem">${esc(c.quem)} · ${c.quando.toLocaleString('pt-BR')}</div></div>`).join('')}
     <div class="linha" style="margin-top:10px">${!d.ciente?`<button class="bt pq" onclick="darCienciaDiretiva('${d.id}')">Marcar como ciente</button>`:'<span class="et ok">Ciente</span>'}<button class="bt g pq" onclick="comentarDiretivaUI('${d.id}')">Comentar</button></div>
@@ -3696,10 +3702,31 @@ function abrirDiretivas(){
 }
 async function ativarPushUI(){try{await window.ativarNotificacoesPush();alert('Notificações ativadas neste aparelho.');}catch(e){alert(e.message||'Não foi possível ativar as notificações.');}}
 async function pegarImagemDiretiva(inp){ const f=inp.files[0]; if(!f)return; try{ctx.imagemDiretiva=await prepararFotoPessoa(f);$('dir-img-nome').textContent=f.name;}catch(e){alert(e.message)} finally{inp.value='';} }
+async function alternarGravacaoDiretiva(){
+  if(gravadorDiretiva&&gravadorDiretiva.state==='recording'){encerrarGravacaoDiretiva();return;}
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){alert('Este aparelho não oferece gravação de áudio pelo navegador.');return;}
+  try{
+    streamAudioDiretiva=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
+    const opcoes=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'];
+    const mime=opcoes.find(x=>MediaRecorder.isTypeSupported(x)); gravadorDiretiva=new MediaRecorder(streamAudioDiretiva,mime?{mimeType:mime,audioBitsPerSecond:64000}:undefined);
+    partesAudioDiretiva=[]; gravadorDiretiva.ondataavailable=e=>{if(e.data.size)partesAudioDiretiva.push(e.data)};
+    gravadorDiretiva.onstop=finalizarAudioDiretiva; inicioAudioDiretiva=Date.now(); gravadorDiretiva.start(500);
+    $('dir-audio-bt').textContent='Parar gravação'; $('dir-audio-bt').classList.remove('g');
+    timerAudioDiretiva=setInterval(()=>{const s=Math.min(120,Math.floor((Date.now()-inicioAudioDiretiva)/1000));$('dir-audio-tempo').textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} / 2:00`;if(s>=120)encerrarGravacaoDiretiva();},250);
+  }catch(e){alert(e.name==='NotAllowedError'?'Autorize o acesso ao microfone para gravar.':'Não foi possível iniciar a gravação.');}
+}
+function encerrarGravacaoDiretiva(){if(gravadorDiretiva?.state==='recording')gravadorDiretiva.stop();clearInterval(timerAudioDiretiva);streamAudioDiretiva?.getTracks().forEach(t=>t.stop());}
+function finalizarAudioDiretiva(){
+  const duracao=Math.min(120,Math.max(1,Math.ceil((Date.now()-inicioAudioDiretiva)/1000))),mime=gravadorDiretiva.mimeType||partesAudioDiretiva[0]?.type||'audio/webm';
+  const blob=new Blob(partesAudioDiretiva,{type:mime}); if(blob.size>3145728){ctx.audioDiretiva=null;alert('A gravação ficou maior que 3 MB. Grave novamente em um ambiente mais silencioso.');return;}
+  const url=URL.createObjectURL(blob);ctx.audioDiretiva={blob,url,mime,duracao};$('dir-audio-bt').textContent='Gravar novamente';$('dir-audio-bt').classList.add('g');$('dir-audio-tempo').textContent=`${Math.floor(duracao/60)}:${String(duracao%60).padStart(2,'0')}`;$('dir-audio-prev').innerHTML=`<audio controls src="${url}" style="width:min(100%,420px)"></audio><div class="ajuda">Prévia da gravação · será enviada ao publicar</div>`;
+}
 async function publicarDiretiva(){ const titulo=$('dir-titulo').value.trim(),texto=$('dir-texto').value.trim(); if(!titulo||!texto){alert('Informe título e orientação.');return;}
-  try{await Promise.resolve(dados.criarDiretiva({titulo,texto,prioridade:$('dir-prioridade').value,destino:$('dir-destino').value,anexo:ctx.imagemDiretiva}));ctx.imagemDiretiva=null;abrirDiretivas();}catch(e){alert(e.message||'Não foi possível publicar.');}}
+  if(gravadorDiretiva?.state==='recording'){alert('Pare a gravação antes de publicar.');return;}
+  try{await Promise.resolve(dados.criarDiretiva({titulo,texto,prioridade:$('dir-prioridade').value,destino:$('dir-destino').value,anexo:ctx.imagemDiretiva,audio:ctx.audioDiretiva}));ctx.imagemDiretiva=null;ctx.audioDiretiva=null;abrirDiretivas();}catch(e){alert(e.message||'Não foi possível publicar.');}}
 async function darCienciaDiretiva(id){await Promise.resolve(dados.marcarDiretiva(id,true));abrirDiretivas();}
 async function comentarDiretivaUI(id){const t=prompt('Comentário (até 500 caracteres)');if(!t||!t.trim())return;await Promise.resolve(dados.comentarDiretiva(id,t.trim().slice(0,500)));abrirDiretivas();}
+async function registrarAudicaoDiretiva(id){try{await Promise.resolve(dados.registrarAudicaoDiretiva(id));}catch(e){console.error('[áudio]',e);}}
 
 /* ============================================================
    Doações
@@ -4125,6 +4152,6 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=16"></script>
+<script src="ponte-banco.js?v=17"></script>
 <script src="pwa.js?v=2"></script>
 </body></html>
