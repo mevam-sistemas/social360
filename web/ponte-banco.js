@@ -454,7 +454,7 @@ async function carregarTudo(){
     destinatario_email:l.destinatario_email, destinatario_nome:l.destinatario_nome,
     enviado_em:new Date(l.enviado_em), sucesso:l.sucesso, erro:l.erro||null }));
 
-  const [pes, ats, prs, regs, pends, doas, fts, presEq, axs] = await Promise.all([
+  const [pes, ats, prs, regs, pends, doas, fts, presEq, axs, locaisEstoque, obsDoacoes] = await Promise.all([
     pega(sbc.from('pessoas').select('*').order('criada_em', { ascending:false }), 'pessoas'),
     pega(sbc.from('atendimentos').select('*, atendimento_servicos(servico_id, quantidade)').order('quando'), 'atendimentos'),
     pega(sbc.from('presencas').select('*').order('entrada'), 'presenças'),
@@ -463,7 +463,9 @@ async function carregarTudo(){
     pega(sbc.from('doacoes').select('*').order('quando'), 'doações'),
     pega(sbc.from('fotos_pessoa').select('*').order('criada_em'), 'histórico de fotos'),
     pega(sbc.from('presencas_equipe').select('*').order('criada_em'), 'presença da equipe'),
-    pega(sbc.from('anexos').select('*').order('criado_em'), 'anexos')
+    pega(sbc.from('anexos').select('*').order('criado_em'), 'anexos'),
+    pega(sbc.from('locais_estoque').select('*').order('nome'), 'locais de armazenamento'),
+    pega(sbc.from('doacao_observacoes').select('*').order('criada_em'), 'observações das doações')
   ]);
   BD.pessoas.length = 0;
   pes.filter(p => !p.arquivada).forEach(p => BD.pessoas.push({ id:p.id, nome:p.nome,
@@ -492,7 +494,11 @@ async function carregarTudo(){
   BD.doacoes.length = 0;
   doas.forEach(d => BD.doacoes.push({ id:d.id, tipo:d.tipo, item:d.item, categoria:d.categoria||'',
     qtd:Number(d.quantidade), quem:d.quem, local:d.unidade_id, quando:new Date(d.quando),
-    responsavel:nomeDe(d.registrada_por), observacao:d.observacao||'', anexos:[] }));
+    localEstoque:d.local_estoque_id||null, unidade:d.unidade_medida||'unidade',
+    responsavel:nomeDe(d.registrada_por), observacao:d.observacao||'', anexos:[], complementos:[] }));
+  BD.locaisEstoque.length = 0;
+  locaisEstoque.forEach(l=>BD.locaisEstoque.push({id:l.id,nome:l.nome,descricao:l.descricao||'',ativo:l.ativo!==false}));
+  obsDoacoes.forEach(o=>{ const d=BD.doacoes.find(x=>x.id===o.doacao_id); if(d)d.complementos.push({id:o.id,texto:o.texto,quem:nomeDe(o.criada_por),quando:new Date(o.criada_em)}); });
   BD.fotos.length = 0;
   fts.forEach(f => BD.fotos.push({ id:f.id, pessoa:f.pessoa_id, url:f.url,
     quando:new Date(f.criada_em), quem:nomeDe(f.criada_por), motivo:f.motivo||'' }));
@@ -506,7 +512,7 @@ async function carregarTudo(){
      cada anexo já sabe a quem pertence pelo id preenchido; aqui só
      distribuímos cada um para o registro certo, já carregado acima. */
   axs.forEach(x => {
-    const item = { tipo: /^image\//.test(x.tipo) || x.tipo === 'img' ? 'img' : 'arq', url:x.url, nome:x.nome||'' };
+    const item = { tipo: /^image\//.test(x.tipo) || x.tipo === 'img' ? 'img' : 'arq', url:x.url, nome:x.nome||'', quem:nomeDe(x.criado_por), quando:new Date(x.criado_em) };
     if(x.atendimento_id){
       const a = BD.atend.find(y => y.id === x.atendimento_id);
       if(a) a.anexos.push(item);
@@ -565,20 +571,41 @@ dados.criarAtendimento = function(a){
   return novo;
 };
 
-dados.criarDoacao = function(d){
+dados.criarDoacao = async function(d){
   if(!CONEXAO.ligada) return demoDados.criarDoacao(d);
   const id = crypto.randomUUID();
-  const novo = Object.assign({ id, quando:new Date(), responsavel:SESSAO.nome, observacao:'', anexos:[] }, d, { id });
-  BD.doacoes.push(novo);
+  const novo = Object.assign({ id, quando:new Date(), responsavel:SESSAO.nome, observacao:'', anexos:[], complementos:[] }, d, { id });
   // doação + anexos numa transação só (mesmo motivo do atendimento acima —
   // ver db/20-transacoes-atomicas.sql, função criar_doacao_completa).
-  pushDB(sbc.rpc('criar_doacao_completa', {
+  const r=await sbc.rpc('criar_doacao_completa', {
     p_id: id, p_tipo: novo.tipo, p_item: novo.item, p_categoria: novo.categoria || null,
-    p_quantidade: novo.qtd, p_quem: novo.quem, p_unidade_id: novo.local || null,
+    p_quantidade: novo.qtd, p_unidade_medida:novo.unidade||'unidade', p_quem: novo.quem,
+    p_unidade_id: novo.local || null, p_local_estoque_id:novo.localEstoque,
     p_observacao: novo.observacao || null,
     p_anexos: (novo.anexos || []).map(x => ({ tipo: x.tipo, url: x.url, nome: x.nome || null }))
-  }), 'a doação');
+  });
+  if(r.error) throw new Error(r.error.message);
+  BD.doacoes.push(novo);
   return novo;
+};
+
+dados.criarLocalEstoque = async function(d){
+  if(!CONEXAO.ligada)return demoDados.criarLocalEstoque(d);
+  const id=crypto.randomUUID(), novo={id,nome:d.nome,descricao:d.descricao||'',ativo:true};
+  const r=await sbc.from('locais_estoque').insert({id,instituicao_id:CONEXAO.orgId,nome:novo.nome,descricao:novo.descricao||null,criada_por:CONEXAO.eu.id});
+  if(r.error)throw new Error(r.error.message); BD.locaisEstoque.push(novo); return novo;
+};
+dados.adicionarObservacaoDoacao = async function(id,texto){
+  if(!CONEXAO.ligada)return demoDados.adicionarObservacaoDoacao(id,texto);
+  const n={id:crypto.randomUUID(),texto,quem:SESSAO.nome,quando:new Date()};
+  const r=await sbc.from('doacao_observacoes').insert({id:n.id,instituicao_id:CONEXAO.orgId,doacao_id:id,texto,criada_por:CONEXAO.eu.id});
+  if(r.error)throw new Error(r.error.message); const d=BD.doacoes.find(x=>x.id===id); if(d)d.complementos.push(n); return n;
+};
+dados.adicionarAnexosDoacao = async function(id,anexos){
+  if(!CONEXAO.ligada)return demoDados.adicionarAnexosDoacao(id,anexos);
+  const linhas=anexos.map(x=>({id:crypto.randomUUID(),instituicao_id:CONEXAO.orgId,doacao_id:id,tipo:x.tipo,url:x.url,nome:x.nome||null,criado_por:CONEXAO.eu.id}));
+  const r=await sbc.from('anexos').insert(linhas); if(r.error)throw new Error(r.error.message);
+  const d=BD.doacoes.find(x=>x.id===id), novos=anexos.map(x=>Object.assign({},x,{quem:SESSAO.nome,quando:new Date()})); if(d)d.anexos.push(...novos); return novos;
 };
 
 dados.criarTecnico = function(t){

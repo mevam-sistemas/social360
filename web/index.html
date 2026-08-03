@@ -872,7 +872,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
       <!-- DOAÇÕES -->
       <section class="tela" id="t-doacoes">
-        <input type="file" id="dc-arq" accept="image/*,application/pdf" multiple style="display:none" onchange="pegarAnexosDoacao(this)">
+        <input type="file" id="dc-arq" accept="image/*" multiple style="display:none" onchange="pegarAnexosDoacao(this)">
         <div id="d-corpo"></div>
       </section>
 
@@ -1173,7 +1173,8 @@ const ANEXOS_TIPO = ['RG (foto)','CPF (foto)','Comprovante de residência','Rece
    alguém usa a foto atual; o histórico existe para mostrar mudança ao
    longo do tempo, e para isso 360px bastam. Rosto muda — e ver essa
    mudança é, muitas vezes, ver o efeito do trabalho da instituição. */
-const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], presencas:[], fotos:[], presEquipe:[], auditoria:[], emailsLog:[] };
+const BD = { pessoas:[], atend:[], tecnicos:[], pendencias:[], doacoes:[], locaisEstoque:[], presencas:[], fotos:[], presEquipe:[], auditoria:[], emailsLog:[] };
+BD.locaisEstoque.push({id:'le1',nome:'Depósito principal',descricao:'',ativo:true},{id:'le2',nome:'Sala de roupas',descricao:'',ativo:true});
 
 (function semear(){
   /* Retrato de demonstração: um campo de cor com as iniciais, desenhado no
@@ -1473,9 +1474,12 @@ const dados = {
   },
   criarDoacao(d){
     const novo = Object.assign({ id:'d'+(BD.doacoes.length+1), quando:new Date(),
-      responsavel: SESSAO.nome, observacao:'', anexos:[] }, d);
+      responsavel: SESSAO.nome, observacao:'', anexos:[], complementos:[] }, d);
     BD.doacoes.push(novo); return novo;
   },
+  criarLocalEstoque(d){ const n={id:'le'+(BD.locaisEstoque.length+1),nome:d.nome,descricao:d.descricao||'',ativo:true}; BD.locaisEstoque.push(n); return n; },
+  adicionarObservacaoDoacao(id,texto){ const d=BD.doacoes.find(x=>x.id===id); if(!d)return null; const n={id:'ob'+Date.now(),texto,quem:SESSAO.nome,quando:new Date()}; (d.complementos||(d.complementos=[])).push(n); return n; },
+  adicionarAnexosDoacao(id,anexos){ const d=BD.doacoes.find(x=>x.id===id); if(!d)return []; const novos=anexos.map(x=>Object.assign({},x,{quem:SESSAO.nome,quando:new Date()})); d.anexos.push(...novos); return novos; },
   criarTecnico(t){
     const novo = Object.assign({ id:'t'+(BD.tecnicos.length+1), quando:new Date(),
       profissional: SESSAO.nome }, t);
@@ -1529,7 +1533,7 @@ const PAPEIS = {
 let SESSAO = Object.assign({ papel:'operador' }, PAPEIS.operador);
 let ctx = { pessoa:null, servs:[], servsQtd:{}, anexos:[], foto:null, retorno:false, local:'l1',
   formPE:null, formPEModo:'entrada', histLocal:null, histDe:'', histAte:'',
-  formDoacao:null, anexosDoacao:[], doModo:'hoje', listaGestao:null };
+  formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, doModo:'hoje', listaGestao:null };
 let tela = 'atender';
 
 /* ============================================================
@@ -2441,7 +2445,8 @@ function blocoLogEmail(){
 }
 const ACAO_AUDITORIA = { insert:'criou', update:'alterou', delete:'removeu' };
 const TABELA_AUDITORIA = { pessoas:'Pessoa', atendimentos:'Atendimento',
-  atendimento_servicos:'Item de atendimento', doacoes:'Doação', equipe:'Equipe',
+  atendimento_servicos:'Item de atendimento', doacoes:'Doação', locais_estoque:'Local de armazenamento',
+  doacao_observacoes:'Observação de doação', equipe:'Equipe',
   funcoes:'Função', unidades:'Local', servicos:'Serviço', config_email:'Envio por e-mail',
   presencas:'Presença', presencas_equipe:'Presença da equipe',
   registros_trabalho:'Registro de trabalho', pendencias:'Pendência',
@@ -3501,12 +3506,18 @@ let abaDo = 'entrada';
 function trocarDoacao(){ abaDo = abaDo==='entrada'?'saida':'entrada'; montarDoacoes(); }
 function verDoacoesHoje(){ ctx.doModo = 'hoje'; ctx.formDoacao = null; montarDoacoes(); }
 function verDoacoesHistorico(){ ctx.doModo = 'historico'; ctx.formDoacao = null; montarDoacoes(); }
+function verEstoqueAtual(){ ctx.doModo = 'estoque'; ctx.formDoacao = null; montarDoacoes(); }
 function abrirFormDoacao(tipo){ ctx.formDoacao = tipo; ctx.anexosDoacao = []; montarDoacoes(); }
 function fecharFormDoacao(){ ctx.formDoacao = null; ctx.anexosDoacao = []; montarDoacoes(); }
 function pegarAnexosDoacao(inp){
   [...inp.files].forEach(f => {
-    if(/^image\//.test(f.type)) comprimir(f,1400,.8).then(u => { ctx.anexosDoacao.push({tipo:'img',url:u,nome:f.name}); anexosDoacaoUI(); });
-    else { ctx.anexosDoacao.push({tipo:'arq',nome:f.name}); anexosDoacaoUI(); }
+    if(!/^image\//.test(f.type)){ alert('Escolha uma imagem JPG, PNG ou WebP.'); return; }
+    if(f.size > 5*1024*1024){ alert('Cada foto pode ter no máximo 5 MB.'); return; }
+    comprimir(f,1400,.8).then(async u => {
+      const foto={tipo:'img',url:u,nome:f.name};
+      if(ctx.doacaoAnexoAlvo){ await Promise.resolve(dados.adicionarAnexosDoacao(ctx.doacaoAnexoAlvo,[foto])); ctx.doacaoAnexoAlvo=null; montarDoacoes(); }
+      else { ctx.anexosDoacao.push(foto); anexosDoacaoUI(); }
+    });
   });
   inp.value = '';
 }
@@ -3515,7 +3526,12 @@ function anexosDoacaoUI(){
   el.innerHTML = ctx.anexosDoacao.map((a,i) =>
     `<div class="anx">${a.tipo==='img'?`<img src="${a.url}" alt="">`:`<div class="rot">${esc((a.nome||'ARQ').slice(0,14))}</div>`}
       <button class="x" onclick="ctx.anexosDoacao.splice(${i},1);anexosDoacaoUI()">×</button></div>`).join('') +
-    `<button class="anx-add" onclick="$('dc-arq').click()">Anexar<br>foto ou<br>arquivo</button>`;
+    `<button class="anx-add" onclick="$('dc-arq').click()">Anexar<br>foto</button>`;
+}
+function criarLocalEstoqueUI(){
+  const nome=prompt('Nome do local de armazenamento (ex.: Depósito de alimentos)');
+  if(!nome||nome.trim().length<2)return;
+  Promise.resolve(dados.criarLocalEstoque({nome:nome.trim()})).then(()=>montarDoacoes());
 }
 function formDoacaoHtml(tipo){
   const categorias = [...new Set(BD.doacoes.map(d=>d.categoria).filter(Boolean))];
@@ -3526,11 +3542,17 @@ function formDoacaoHtml(tipo){
         <datalist id="dc-categorias">${categorias.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
     </div>
     <div class="par">
-      <div class="cp"><label>Quantidade</label><input id="dc-qtd" type="number" min="1" value="1"></div>
+      <div class="cp"><label>Quantidade</label><input id="dc-qtd" type="number" min="0.01" step="0.01" value="1"></div>
+      <div class="cp"><label>Unidade de medida</label><select id="dc-unidade">
+        ${['unidade','kg','litro','pacote','caixa','peça'].map(u=>`<option>${u}</option>`).join('')}</select></div>
+    </div><div class="par">
       <div class="cp"><label>${tipo==='entrada'?'Doador — de onde veio':'Destinatário — pra onde foi'}</label>
         <input id="dc-quem" placeholder="${tipo==='entrada'?'Ex.: Supermercado Bom Preço':'Ex.: Família Andrade'}"></div>
+      <div class="cp"><label>Local de armazenamento</label><select id="dc-estoque"><option value="">Selecione…</option>
+        ${BD.locaisEstoque.filter(l=>l.ativo!==false).map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('')}</select>
+        <button class="bt g pq" style="margin-top:7px" onclick="criarLocalEstoqueUI()">+ Novo local</button></div>
     </div>
-    <div class="cp"><label>Local <span class="op">— opcional</span></label>
+    <div class="cp"><label>Local do recebimento/entrega <span class="op">— opcional</span></label>
       <select id="dc-local"><option value="">Sem local específico</option>
         ${LOCAIS.filter(l=>l.ativa!==false).map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('')}
       </select></div>
@@ -3544,30 +3566,85 @@ function formDoacaoHtml(tipo){
     </div>
   </div>`;
 }
-function confirmarDoacao(tipo){
+async function confirmarDoacao(tipo){
   const item = ($('dc-item').value||'').trim();
   const quem = ($('dc-quem').value||'').trim();
   if(!item){ $('dc-item').focus(); return; }
   if(!quem){ $('dc-quem').focus(); return; }
-  const d = dados.criarDoacao({ tipo, item, categoria: ($('dc-categoria').value||'').trim(),
-    qtd: Math.max(1, +$('dc-qtd').value || 1), quem, local: $('dc-local').value || null,
-    observacao: ($('dc-obs').value||'').trim(), anexos:[...ctx.anexosDoacao] });
+  if(!$('dc-estoque').value){ $('dc-estoque').focus(); alert('Informe onde o item ficará armazenado.'); return; }
+  try { await Promise.resolve(dados.criarDoacao({ tipo, item, categoria: ($('dc-categoria').value||'').trim(),
+    qtd: Math.max(.01, +$('dc-qtd').value || 1), unidade:$('dc-unidade').value, quem,
+    local: $('dc-local').value || null, localEstoque:$('dc-estoque').value,
+    observacao: ($('dc-obs').value||'').trim(), anexos:[...ctx.anexosDoacao], complementos:[] })); }
+  catch(e){ alert(e.message||'Não foi possível registrar o movimento.'); return; }
   ctx.formDoacao = null; ctx.anexosDoacao = [];
   montarDoacoes();
   $('d-corpo').insertAdjacentHTML('afterbegin',
     `<div class="nota ok" style="margin-bottom:14px">${tipo==='entrada'?'Entrada':'Saída'} de ${esc(item)} registrada.</div>`);
+}
+function nomeLocalEstoque(id){ return (BD.locaisEstoque.find(l=>l.id===id)||{}).nome || 'Sem local definido'; }
+function saldoEstoque(){
+  const m=new Map();
+  BD.doacoes.forEach(d=>{ const k=[d.localEstoque||'',String(d.item).trim().toLowerCase(),d.unidade||'unidade'].join('|');
+    const a=m.get(k)||{item:d.item,categoria:d.categoria,localEstoque:d.localEstoque,unidade:d.unidade||'unidade',qtd:0};
+    a.qtd+=(d.tipo==='entrada'?1:-1)*d.qtd; m.set(k,a); });
+  return [...m.values()].filter(x=>Math.abs(x.qtd)>.00001).sort((a,b)=>a.item.localeCompare(b.item));
+}
+function adicionarObsDoacao(id){
+  const texto=prompt('Nova observação (ficará registrada com seu nome, data e hora)');
+  if(!texto||!texto.trim())return;
+  Promise.resolve(dados.adicionarObservacaoDoacao(id,texto.trim())).then(()=>montarDoacoes());
+}
+function adicionarFotoDoacao(id){ ctx.doacaoAnexoAlvo=id; $('dc-arq').click(); }
+function detalhesMovimento(d){
+  const l=LOCAIS.find(x=>x.id===d.local), entrada=d.tipo==='entrada';
+  return `<div class="pn" style="margin-bottom:12px"><div class="cx">
+    <div class="linha"><span class="et ${entrada?'ok':'az'}"><span class="tx">${entrada?'Entrada':'Saída'}</span></span>
+      <b>${esc(d.item)}</b><span class="sp"></span><span class="hr">${d.quando.toLocaleString('pt-BR')}</span></div>
+    <div class="sub">${d.qtd} ${esc(d.unidade||'unidade')} · ${esc(d.categoria||'Sem categoria')} · Armazenamento: <b>${esc(nomeLocalEstoque(d.localEstoque))}</b></div>
+    <div class="sub">${entrada?'De':'Para'}: ${esc(d.quem)}${l?' · Movimento em '+esc(l.nome):''} · Registrado por ${esc(d.responsavel||'—')}</div>
+    ${d.observacao?`<div class="obs"><b>Observação inicial:</b> ${esc(d.observacao)}</div>`:''}
+    ${(d.complementos||[]).map(o=>`<div class="obs">${esc(o.texto)}<div class="quem">${esc(o.quem||'—')} · ${o.quando.toLocaleString('pt-BR')}</div></div>`).join('')}
+    ${d.anexos&&d.anexos.length?`<div class="anxs">${d.anexos.map(x=>`<div class="anx"><img src="${x.url}" alt="${esc(x.nome||'Foto da doação')}"></div>`).join('')}</div>`:''}
+    ${pode('doacoes')?`<div class="linha" style="margin-top:10px"><button class="bt g pq" onclick="adicionarObsDoacao('${d.id}')">+ Observação</button><button class="bt g pq" onclick="adicionarFotoDoacao('${d.id}')">+ Foto posterior</button></div>`:''}
+  </div></div>`;
+}
+function filtrarPeriodoEstoque(){
+  const de=$('est-de').value, ate=$('est-ate').value;
+  const d0=de?new Date(de+'T00:00:00'):null, d1=ate?new Date(ate+'T23:59:59'):null;
+  const movs=BD.doacoes.filter(d=>(!d0||d.quando>=d0)&&(!d1||d.quando<=d1)).sort((a,b)=>b.quando-a.quando);
+  const ent=movs.filter(d=>d.tipo==='entrada'), sai=movs.filter(d=>d.tipo==='saida');
+  $('est-resumo').innerHTML=`<b>${ent.length}</b> entradas (${ent.reduce((s,d)=>s+d.qtd,0)} itens) · <b>${sai.length}</b> saídas (${sai.reduce((s,d)=>s+d.qtd,0)} itens)`;
+  $('est-contagem').textContent=movs.length; $('est-linha').innerHTML=movs.map(d=>detalhesMovimento(d)).join('')||'<div class="nada">Nenhum movimento neste período.</div>';
+}
+function estoqueAtualHtml(){
+  const saldos=saldoEstoque(), total=saldos.reduce((s,x)=>s+x.qtd,0), locais=new Set(saldos.map(x=>x.localEstoque)).size;
+  const ultimos30=BD.doacoes.filter(d=>d.quando>=diasAtras(30)), ent30=ultimos30.filter(d=>d.tipo==='entrada'), sai30=ultimos30.filter(d=>d.tipo==='saida');
+  const tabela=`<div class="pn"><div class="ph"><h2>Saldo por item e local</h2><span class="sp"></span><span class="n">${saldos.length}</span></div>
+    <table class="tb"><thead><tr><th>Item</th><th>Categoria</th><th>Armazenado em</th><th class="num">Saldo</th></tr></thead><tbody>
+    ${saldos.map(x=>`<tr><td><b>${esc(x.item)}</b></td><td>${esc(x.categoria||'—')}</td><td>${esc(nomeLocalEstoque(x.localEstoque))}</td><td class="num"><b>${x.qtd} ${esc(x.unidade)}</b></td></tr>`).join('')||'<tr><td colspan="4">Nenhum item em estoque.</td></tr>'}</tbody></table></div>`;
+  const movs=BD.doacoes.slice().sort((a,b)=>b.quando-a.quando);
+  return `<div class="gr3" style="margin-bottom:16px">${kp('Posições em estoque',saldos.length,'item + local + unidade','ok')}${kp('Quantidade total',total,'soma das unidades de medida','lar')}${kp('Locais utilizados',locais,'armazenamentos com saldo','az')}</div>
+    <div class="pn" style="margin-bottom:16px"><div class="ph"><h2>Resumo por período</h2></div><div class="cx"><div class="par"><div class="cp"><label>De</label><input id="est-de" type="date" value="${iso(diasAtras(30))}" onchange="filtrarPeriodoEstoque()"></div><div class="cp"><label>Até</label><input id="est-ate" type="date" value="${iso(agora)}" onchange="filtrarPeriodoEstoque()"></div></div><div id="est-resumo"><b>${ent30.length}</b> entradas (${ent30.reduce((s,d)=>s+d.qtd,0)} itens) · <b>${sai30.length}</b> saídas (${sai30.reduce((s,d)=>s+d.qtd,0)} itens)</div></div></div>
+    ${tabela}<div class="ph" style="margin-top:18px"><h2>Linha do tempo de entradas e saídas</h2><span class="sp"></span><span class="n" id="est-contagem">${ultimos30.length}</span></div><div id="est-linha">${ultimos30.sort((a,b)=>b.quando-a.quando).map(d=>detalhesMovimento(d)).join('')}</div>`;
 }
 function montarDoacoes(){
   const hoje = iso(agora);
   const botoesRegistro = pode('doacoes') ? `<div class="acoes" style="margin-bottom:14px">
       <button class="bt g pq" onclick="abrirFormDoacao('entrada')">Registrar entrada</button>
       <button class="bt g pq" onclick="abrirFormDoacao('saida')">Registrar saída</button>
+      <button class="bt ${ctx.doModo==='estoque'?'':'g'} pq" onclick="verEstoqueAtual()">Estoque atual</button>
     </div>` : '';
   const abas = `<div class="linha" style="margin-bottom:14px">
       <button class="bt ${ctx.doModo==='hoje'?'':'g'} pq" onclick="verDoacoesHoje()">Hoje</button>
       <button class="bt ${ctx.doModo==='historico'?'':'g'} pq" onclick="verDoacoesHistorico()">Histórico completo</button>
+      <button class="bt ${ctx.doModo==='estoque'?'':'g'} pq" onclick="verEstoqueAtual()">Estoque atual</button>
     </div>`;
   const form = ctx.formDoacao ? formDoacaoHtml(ctx.formDoacao) : '';
+  if(ctx.doModo==='estoque'){
+    $('d-corpo').innerHTML=`${botoesRegistro}${form}${abas}${estoqueAtualHtml()}`;
+    if(ctx.formDoacao) anexosDoacaoUI(); return;
+  }
   if(ctx.doModo === 'hoje'){
     const doHoje = BD.doacoes.filter(d => iso(d.quando) === hoje).sort((a,b)=>b.quando-a.quando);
     const ent = doHoje.filter(d=>d.tipo==='entrada'), sai = doHoje.filter(d=>d.tipo==='saida');
@@ -3839,5 +3916,5 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=10"></script>
+<script src="ponte-banco.js?v=11"></script>
 </body></html>
