@@ -30,7 +30,7 @@ Hoje o Cloudflare publica `main` diretamente. Para separar homologação e produ
 - O arquivo contém `pg_dump`, todos os buckets do Storage, manifesto de conteúdo e checksums SHA-256.
 - O pacote é comprimido e cifrado com `age` antes de ser enviado ao bucket privado no Cloudflare R2.
 - Política gratuita inicial: 7 diários, 4 semanais e 6 mensais. A retenção deve ser ampliada quando houver orçamento ou obrigação regulatória.
-- O workflow `Teste de restauração` roda trimestralmente e também manualmente: baixa o backup mais recente, valida todos os checksums e restaura o esquema `social` em PostgreSQL descartável, sem tocar na produção.
+- O workflow `Teste de restauração` roda trimestralmente e também manualmente: baixa o backup mais recente, valida todos os checksums e restaura os esquemas `public` (MODOX) e `social` em PostgreSQL descartável, sem tocar na produção.
 - Backup sem teste de restauração bem-sucedido não é evidência de recuperação.
 - Definir RPO de 24 horas com backup diário ou habilitar PITR para reduzir o RPO.
 
