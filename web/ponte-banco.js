@@ -79,7 +79,7 @@ function abrirEntrar(){
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin-top:8px">
     <button onclick="entrarComSenha()" class="bt" style="width:100%;margin-top:12px">Entrar</button>
     <div id="ent-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
-    <button onclick="pedirRedefinirSenha()" style="margin-top:14px;background:none;border:none;color:#6b625a;
+    <button onclick="abrirPedirRedefinirSenha()" style="margin-top:14px;background:none;border:none;color:#6b625a;
       font-size:13px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
     <button onclick="fecharEntrar();abrirCadastroCompleto()" style="display:block;margin-top:8px;background:none;border:none;color:#6b625a;
       font-size:13px;cursor:pointer;text-decoration:underline">Ainda não sou cliente — criar conta</button>
@@ -88,6 +88,27 @@ function abrirEntrar(){
   setTimeout(() => { const e = document.getElementById('ent-email'); if(e) e.focus(); }, 60);
 }
 function fecharEntrar(){ const o = document.getElementById('entrar-ov'); if(o) o.remove(); }
+function abrirPedirRedefinirSenha(){
+  const emailAtual = (document.getElementById('ent-email')?.value || '').trim().toLowerCase();
+  fecharEntrar();
+  const o = document.createElement('div'); o.id = 'pedir-redefinir-ov';
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
+    + 'display:flex;align-items:center;justify-content:center;padding:18px';
+  o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
+    <h2 style="margin:0 0 6px;font-size:19px">Recuperar acesso</h2>
+    <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Informe o e-mail da sua conta. Você receberá um link para escolher uma nova senha.</p>
+    <input id="pr-email" type="email" placeholder="seu@email.com" autocomplete="email"
+      value="${esc(emailAtual)}"
+      style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px">
+    <button id="pr-enviar" onclick="pedirRedefinirSenha()" class="bt" style="width:100%;margin-top:12px">Enviar link de recuperação</button>
+    <div id="pr-msg" aria-live="polite" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
+    <button onclick="fecharPedirRedefinirSenha();abrirEntrar()" style="margin-top:14px;background:none;border:none;color:#6b625a;
+      font-size:13px;cursor:pointer;text-decoration:underline">Voltar para entrar</button>
+  </div>`;
+  document.body.appendChild(o);
+  setTimeout(() => { const e = document.getElementById('pr-email'); if(e) e.focus(); }, 60);
+}
+function fecharPedirRedefinirSenha(){ const o = document.getElementById('pedir-redefinir-ov'); if(o) o.remove(); }
 async function entrarComSenha(){
   const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
   const senha = document.getElementById('ent-senha').value || '';
@@ -101,13 +122,23 @@ async function entrarComSenha(){
   conectar();
 }
 async function pedirRedefinirSenha(){
-  const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
-  const msg = document.getElementById('ent-msg');
-  if(!email.includes('@')){ msg.textContent = 'Digite seu e-mail ali em cima primeiro.'; return; }
+  const email = (document.getElementById('pr-email')?.value || '').trim().toLowerCase();
+  const msg = document.getElementById('pr-msg');
+  const botao = document.getElementById('pr-enviar');
+  if(!email.includes('@')){ msg.textContent = 'Confira o e-mail informado.'; return; }
   msg.textContent = 'Enviando link de redefinição…';
+  botao.disabled = true;
   const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-  if(error){ console.error('[banco] redefinir senha', error); msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.'; return; }
-  msg.textContent = 'Te mandamos um link por e-mail pra redefinir a senha. Confira sua caixa de entrada.';
+  if(error){
+    console.error('[banco] redefinir senha', error);
+    msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.';
+    botao.disabled = false;
+    return;
+  }
+  document.getElementById('pr-email').disabled = true;
+  botao.textContent = 'Link solicitado';
+  msg.style.color = '#12805c';
+  msg.textContent = 'Se esse e-mail estiver cadastrado, o link chegará em alguns minutos. Confira também o spam.';
 }
 
 /* ============================================================
@@ -117,7 +148,7 @@ async function pedirRedefinirSenha(){
    código por e-mail.
    ============================================================ */
 function abrirRedefinirSenha(){
-  fecharEntrar(); fecharCadastroCompleto();
+  fecharEntrar(); fecharPedirRedefinirSenha(); fecharCadastroCompleto();
   const o = document.createElement('div'); o.id = 'redefinir-ov';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
     + 'display:flex;align-items:center;justify-content:center;padding:18px';
