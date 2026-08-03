@@ -509,13 +509,6 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .nada b{display:block;font-size:15.5px;color:var(--tx);margin-bottom:6px;font-weight:700}
 .nada p{font-size:13.5px;max-width:44ch;margin:0 auto;line-height:1.6}
 
-/* ---------- faixa ---------- */
-.faixa{position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--tx);color:#9299A6;
-  font-size:11px;font-weight:650;height:26px;display:flex;align-items:center;justify-content:center;
-  gap:12px;padding:0 12px}
-.faixa b{color:#fff}
-@media(max-width:920px){ .faixa{display:none} }
-
 /* ---------- confirmação (troca o confirm() nativo do navegador) ---------- */
 .cfm-ovl{position:fixed;inset:0;z-index:500;background:rgba(15,17,20,.5);display:none;
   align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);
@@ -894,8 +887,6 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 <div class="barra-m" id="barra-m"></div>
 <div class="lupa" id="lupa" onclick="fecharLupa()"><div class="cx2" id="lupa-cx"></div></div>
 
-<div class="faixa">Demonstração · dados fictícios sobre uma instituição real ·
-  <b>360social</b> · <b>ARBOR Labs</b> desenvolvido orgulhosamente no Brasil</div>
 <script>
 /* ============================================================
    Base de demonstração — Instituto Humanitário e Educativo SOS Vida
