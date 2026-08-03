@@ -81,6 +81,7 @@ a{color:inherit;text-decoration:none}
 .topo nav a{font-size:14.5px;font-weight:600;color:var(--tx2);padding:8px 12px;border-radius:8px;transition:.14s}
 .topo nav a:hover{background:var(--b2);color:var(--tx)}
 .topo .sp{flex:1}
+.topo .entrar{font-size:13px;letter-spacing:.04em;padding:10px 17px}
 .bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;
   font-weight:700;letter-spacing:-.01em;border-radius:var(--r);transition:.16s;font-size:15px;
   padding:11px 20px;line-height:1.2;white-space:nowrap}
@@ -91,7 +92,8 @@ a{color:inherit;text-decoration:none}
 .bt.fan{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.24)}
 .bt.fan:hover{background:rgba(255,255,255,.18)}
 .bt.gr{padding:14px 26px;font-size:16.5px}
-@media(max-width:880px){ .topo nav{display:none} .topo .in{height:60px;gap:14px} }
+@media(max-width:880px){ .topo nav{display:none} .topo .in{height:60px;gap:10px} }
+@media(max-width:640px){ .topo .comecar{display:none} .topo .entrar{margin-left:auto} }
 
 /* ---------- hero ---------- */
 .hero{position:relative;padding:74px 0 8px;overflow:hidden}
@@ -401,7 +403,8 @@ footer{padding:64px 0 40px;border-top:1px solid var(--ln);margin-top:24px}
       <a href="#planos">Planos</a>
     </nav>
     <div class="sp"></div>
-    <a class="bt pri" href="#planos">Começar agora</a>
+    <a class="bt sec entrar" href="https://app.360social.com.br/">ENTRAR</a>
+    <a class="bt pri comecar" href="#planos">Começar agora</a>
   </div>
 </header>
 
