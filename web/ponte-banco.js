@@ -161,7 +161,7 @@ function abrirRedefinirSenha(){
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
     <h2 style="margin:0 0 6px;font-size:19px">Escolher nova senha</h2>
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Defina a nova senha da sua conta.</p>
-    <input id="rs-senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password"
+    <input id="rs-senha" type="password" minlength="10" placeholder="Nova senha (mínimo 10 caracteres)" autocomplete="new-password"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px">
     <button onclick="confirmarRedefinirSenha()" class="bt" style="width:100%;margin-top:12px">Salvar nova senha</button>
     <div id="rs-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
@@ -172,7 +172,7 @@ function abrirRedefinirSenha(){
 async function confirmarRedefinirSenha(){
   const senha = document.getElementById('rs-senha').value || '';
   const msg = document.getElementById('rs-msg');
-  if(senha.length < 6){ msg.textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
+  if(senha.length < 10){ msg.textContent = 'A senha precisa de pelo menos 10 caracteres.'; return; }
   msg.textContent = 'Salvando…';
   const { error } = await sbc.auth.updateUser({ password: senha });
   if(error){ console.error('[banco] redefinir senha', error); msg.textContent = 'Não consegui salvar agora. Tente de novo.'; return; }
@@ -300,7 +300,7 @@ function abrirCadastroCompleto(){
     <input id="cc-email" type="email" placeholder="seu@email.com" autocomplete="email"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 10px;box-sizing:border-box">
     <label style="font-size:13px;color:#6b625a">Senha</label>
-    <input id="cc-senha" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
+    <input id="cc-senha" type="password" minlength="10" placeholder="Mínimo 10 caracteres" autocomplete="new-password"
       style="width:100%;padding:11px 12px;border:1.5px solid #d8d0c6;border-radius:10px;font-size:15px;margin:4px 0 14px;box-sizing:border-box">
     <button onclick="confirmarCadastroCompleto()" class="bt" style="width:100%">Criar conta e começar meu teste</button>
     <div id="cc-msg" style="margin-top:10px;font-size:13px;color:#8f3907"></div>
@@ -338,7 +338,7 @@ async function confirmarCadastroCompleto(){
   if(!nomeInst){ msg.textContent = 'Dá um nome pra sua instituição ou projeto.'; return; }
   if(!nomePessoa){ msg.textContent = 'Falta o seu nome completo.'; return; }
   if(!email.includes('@')){ msg.textContent = 'Confira o e-mail.'; return; }
-  if(senha.length < 6){ msg.textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
+  if(senha.length < 10){ msg.textContent = 'A senha precisa de pelo menos 10 caracteres.'; return; }
 
   msg.textContent = 'Criando sua conta…';
   // emailRedirectTo é essencial aqui: o projeto Supabase é compartilhado
