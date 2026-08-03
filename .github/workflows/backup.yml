@@ -41,7 +41,7 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update
-          sudo apt-get install --yes age postgresql-client-17 zstd
+          sudo apt-get install --yes age expect postgresql-client-17 zstd
 
       - name: Validar configuração protegida
         shell: bash
@@ -80,7 +80,19 @@ jobs:
           set -euo pipefail
           archive="${RUNNER_TEMP}/social360-$(date -u +%F).tar.zst"
           tar --directory="${RUNNER_TEMP}" --create --file=- social360-backup | zstd -19 -T0 > "$archive"
-          AGE_PASSPHRASE="$BACKUP_PASSPHRASE" age --passphrase --output "${archive}.age" "$archive"
+          export INPUT_ARCHIVE="$archive" OUTPUT_ARCHIVE="${archive}.age"
+          expect <<'EXPECT_EOF'
+          set timeout -1
+          log_user 0
+          spawn age --passphrase --output $env(OUTPUT_ARCHIVE) $env(INPUT_ARCHIVE)
+          expect "Enter passphrase"
+          send -- "$env(BACKUP_PASSPHRASE)\r"
+          expect "Confirm passphrase"
+          send -- "$env(BACKUP_PASSPHRASE)\r"
+          expect eof
+          catch wait result
+          exit [lindex $result 3]
+          EXPECT_EOF
           shred --remove "$archive"
           echo "BACKUP_FILE=${archive}.age" >> "$GITHUB_ENV"
           echo "BACKUP_NAME=social360-$(date -u +%F).tar.zst.age" >> "$GITHUB_ENV"
