@@ -134,7 +134,7 @@ a{color:inherit}
 .bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;
   cursor:pointer;font-size:14.5px;font-weight:700;background:var(--lar);color:#fff;
   border-radius:var(--r);padding:11px 18px;transition:.13s;text-decoration:none;
-  min-height:42px;letter-spacing:-.008em}
+  min-height:44px;letter-spacing:-.008em}
 .bt:hover{background:var(--lar-esc)}
 .bt:active{transform:translateY(1px)}
 .bt:disabled{background:var(--b3);color:var(--tx4);cursor:not-allowed;border-color:var(--ln)}
@@ -148,6 +148,11 @@ a{color:inherit}
 .bt.pq{font-size:13px;padding:7px 12px;min-height:34px}
 .bt.larga{width:100%}
 .linha{display:flex;gap:9px;flex-wrap:wrap}
+.bt-icone{width:44px;height:44px;border-radius:50%;padding:0;display:inline-grid;place-items:center;flex:none}
+.bt-icone svg{width:20px;height:20px}
+.bt-voltar{display:none;align-items:center;gap:7px;min-height:44px}
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--lar);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 /* ---------- painel ---------- */
 .pn{background:var(--b0);border:1px solid var(--ln);border-radius:var(--r2);
@@ -535,6 +540,8 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
   <symbol id="i-agenda" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></g></symbol>
   <symbol id="i-relogio" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></g></symbol>
   <symbol id="i-alerta" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 4.2 2.8 18a1.8 1.8 0 001.6 2.7h15.2a1.8 1.8 0 001.6-2.7L13.4 4.2a1.8 1.8 0 00-2.8 0z"/><path d="M12 9.8v4M12 17h.01"/></g></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="3" width="7" height="12" rx="3.5"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3M8.5 21h7"/></g></symbol>
+  <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M14.5 5 7.5 12l7 7M8 12h11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-bloqueado" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6.5 6.5l11 11"/></g></symbol>
 </svg>
 
@@ -589,7 +596,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <nav id="l-nav"></nav>
     <div class="selo-nosso">
       <svg><use href="#s360"/></svg>
-      <span>Roda em <b>360<i>social</i></b><br>Arbor Labs · feito no Brasil</span>
+      <span>Roda em <b>360<i>social</i></b><br>Arbor Labs · feito no Brasil · v1.1.0</span>
     </div>
     <div class="rodape-l">
       <div class="in" id="l-in"></div>
@@ -611,6 +618,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
 
     <div class="cab">
+      <button id="voltar-bt" class="bt g bt-voltar" onclick="voltarTela()" aria-label="Voltar à tela anterior"><svg width="18" height="18" aria-hidden="true"><use href="#i-voltar"/></svg><span>Voltar</span></button>
       <div class="t"><h1 id="c-tit"></h1><div class="sub" id="c-sub"></div></div>
       <button id="dir-bt" class="bt g pq" onclick="abrirDiretivas()" title="Orientações da equipe">Orientações <span class="n" id="dir-n">0</span></button>
       <div class="acoes" id="c-acoes"></div>
@@ -1581,7 +1589,7 @@ let ctx = { pessoa:null, servs:[], servsQtd:{}, anexos:[], foto:null, retorno:fa
   formPE:null, formPEModo:'entrada', histLocal:null, histDe:'', histAte:'',
   formDoacao:null, anexosDoacao:[], doacaoAnexoAlvo:null, docsCadastro:[], docPessoaAlvo:null, imagemDiretiva:null, audioDiretiva:null,
   doModo:'hoje', listaGestao:null };
-let tela = 'atender';
+let tela = 'atender', pilhaTelas=[], acaoVoltarTela=null, restaurandoTela=false;
 
 /* ============================================================
    PERMISSÕES — quem faz o quê
@@ -1684,6 +1692,9 @@ function ir(t, opts){
     if(typeof abrirInstituicao === 'function') abrirInstituicao('plano');
     return;
   }
+  opts=opts||{};
+  if(!restaurandoTela && t!==tela && $('t-'+t)) pilhaTelas.push({tela,titulo:$('c-tit').textContent,sub:$('c-sub').textContent});
+  if(t!==tela) acaoVoltarTela=null;
   tela = t;
   document.querySelectorAll('.tela').forEach(e => e.classList.remove('on'));
   const el = $('t-'+t); if(el) el.classList.add('on');
@@ -1691,9 +1702,29 @@ function ir(t, opts){
   $('c-tit').textContent = (opts && opts.titulo) || tit;
   $('c-sub').textContent = (opts && opts.sub) || sub;
   $('c-acoes').innerHTML = (opts && opts.acoes) || '';
+  if(opts.voltar) acaoVoltarTela=opts.voltar;
+  atualizarVoltar();
   $('acao').classList.remove('on');
   menus();
   window.scrollTo(0,0);
+}
+function definirVoltar(fn){acaoVoltarTela=fn;atualizarVoltar();}
+function atualizarVoltar(){const b=$('voltar-bt');if(b)b.style.display=(acaoVoltarTela||pilhaTelas.length)?'inline-flex':'none';}
+function descartarRascunhoAtual(){
+  if(tela==='diretivas'){descartandoAudioDiretiva=true;encerrarGravacaoDiretiva();if(ctx.audioDiretiva?.url)URL.revokeObjectURL(ctx.audioDiretiva.url);ctx.audioDiretiva=null;ctx.imagemDiretiva=null;}
+  if(tela==='cadastro'){ctx.foto=null;ctx.docsCadastro=[];}
+  if(tela==='registrar'){ctx.servs=[];ctx.servsQtd={};ctx.anexos=[];ctx.retorno=false;}
+  if(tela==='editar'){fotoNova=null;}
+  if(tela==='tecnico'){ctx.retorno=false;}
+  if(tela==='doacoes'){ctx.formDoacao=null;ctx.anexosDoacao=[];ctx.doacaoAnexoAlvo=null;}
+  if(tela==='camera'&&fluxoCam){fluxoCam.getTracks().forEach(t=>t.stop());fluxoCam=null;}
+  fotoEquipeNova=null;
+}
+function voltarTela(){
+  descartarRascunhoAtual();
+  if(acaoVoltarTela){const fn=acaoVoltarTela;acaoVoltarTela=null;fn();return;}
+  const ant=pilhaTelas.pop();if(!ant){atualizarVoltar();return;}
+  restaurandoTela=true;ir(ant.tela,{titulo:ant.titulo,sub:ant.sub});restaurandoTela=false;atualizarVoltar();
 }
 function menus(){
   const m = MENUS[SESSAO.papel] || [];
@@ -1708,6 +1739,7 @@ function menus(){
       <span class="pt"></span></button>`).join('');
 }
 function irMenu(t){
+  descartarRascunhoAtual(); pilhaTelas=[]; acaoVoltarTela=null;
   if(t !== 'presenca'){ ctx.formPE = null; ctx.histLocal = null; }
   if(t !== 'doacoes') ctx.formDoacao = null;
   if(t === 'atender') montarAtender();
@@ -1739,7 +1771,7 @@ function trocarPapel(){
   const o = ['operador','social','coordenador','presidente'];
   const p = o[(o.indexOf(SESSAO.papel)+1) % o.length];
   SESSAO = Object.assign({ papel:p }, PAPEIS[p]);
-  identidade(); irMenu(inicioDoPapel());
+  identidade(); pilhaTelas=[];acaoVoltarTela=null;irMenu(inicioDoPapel());
 }
 function monogramaOrg(){
   return ORG.nome.trim().split(/\s+/).filter(w => w.length > 2)
@@ -1923,6 +1955,7 @@ function abrirInstituicao(qual){
     abaOrg === 'plano'      ? blocoPlano()      :
     abaOrg === 'auditoria'  ? blocoAuditoria()  : blocoEmail());
   if(abaOrg === 'plano' && CONEXAO.ligada && typeof carregarPlano === 'function') carregarPlano();
+  acaoVoltarTela=null;
   ir('org', { titulo:'Instituição', sub:'Identidade, dados institucionais, locais, serviços e envios por e-mail.' });
 }
 function blocoPlano(){
@@ -1966,7 +1999,7 @@ function blocoIdentidade(){
         <div class="logo" id="org-previa" style="width:96px;height:96px;border-radius:var(--r2);
           display:grid;place-items:center;background:var(--lar-fun);color:var(--lar-esc);
           border:1px solid var(--lar-bd);font-size:28px;font-weight:800;overflow:hidden">
-          ${ORG.logo ? `<img src="${ORG.logo}" style="width:100%;height:100%;object-fit:contain;background:#fff">`
+          ${ORG.logo ? `<img src="${ORG.logo}" alt="Logotipo de ${esc(ORG.nome)}" style="width:100%;height:100%;object-fit:contain;background:#fff">`
                      : monogramaOrg()}</div>
       </div>
       <div style="flex:1;min-width:240px">
@@ -2071,7 +2104,7 @@ function formLocal(lid){
           ${lid && l.ativa===false ? `<button class="bt g" onclick="reativarLocal('${lid}')">Reativar</button>`:''}
         </div>
       </div></div>`;
-  ir('org', { titulo:'Locais', sub: novo?'Novo local':esc(l.nome) });
+  ir('org', { titulo:'Locais', sub: novo?'Novo local':esc(l.nome), voltar:()=>abrirInstituicao('locais') });
 }
 function salvarLocal(lid){
   const nome = $('lc-nome').value.trim();
@@ -2151,7 +2184,7 @@ function formServico(sid){
           ${sid && s.ativo===false ? `<button class="bt g" onclick="reativarServico('${sid}')">Reativar</button>`:''}
         </div>
       </div></div>`;
-  ir('org', { titulo:'Serviços e recursos', sub: novo?'Novo serviço ou recurso':esc(s.nome) });
+  ir('org', { titulo:'Serviços e recursos', sub: novo?'Novo serviço ou recurso':esc(s.nome), voltar:()=>abrirInstituicao('servicos') });
 }
 function salvarServico(sid){
   const nome = $('sv-nome').value.trim();
@@ -2181,7 +2214,7 @@ function blocoEquipe(){
     (a.status===b.status ? ordem.indexOf(a.papel)-ordem.indexOf(b.papel)
                          : a.status==='ativo' ? -1 : 1));
   const linhas = lista.map(u => `<div class="linha-cfg" style="cursor:pointer" onclick="abrirEquipeMembro('${u.id}')">
-    ${u.foto?`<img src="${u.foto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:38px;height:38px;border-radius:50%;
+    ${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:38px;height:38px;border-radius:50%;
       display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none">${iniciais(u.nome)}</div>`}
     <div class="t"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
@@ -2281,7 +2314,7 @@ function abrirEquipeMembro(uid){
   const participacoes = hist.filter(h => h.tipo === 'presenca').length;
   const faltas = hist.filter(h => h.tipo === 'falta').length;
   const aberta = hist.find(h => h.tipo === 'presenca' && !h.saida);
-  $('em-ficha').innerHTML = `${u.foto?`<img src="${u.foto}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:56px;height:56px;
+  $('em-ficha').innerHTML = `${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:56px;height:56px;
       border-radius:50%;display:grid;place-items:center;color:#fff;font-size:19px;font-weight:800;flex:none">
       ${iniciais(u.nome)}</div>`}
     <div class="d"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
@@ -2338,7 +2371,7 @@ function formPapel(uid){
   $('org-corpo').innerHTML = `
     <div class="pn"><div class="ph"><h2>${novo?'Adicionar pessoa à equipe':esc(u.nome)}</h2></div>
       <div class="cx">
-        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px"><div id="eq-foto-prev">${u.foto?`<img src="${u.foto}" style="width:72px;height:72px;border-radius:50%;object-fit:cover">`:`<div class="in" style="width:72px;height:72px;border-radius:50%;background:${corDe(u.nome||'Equipe')};display:grid;place-items:center;color:#fff;font-weight:800">${iniciais(u.nome||'EQ')}</div>`}</div>
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px"><div id="eq-foto-prev">${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:72px;height:72px;border-radius:50%;object-fit:cover">`:`<div class="in" style="width:72px;height:72px;border-radius:50%;background:${corDe(u.nome||'Equipe')};display:grid;place-items:center;color:#fff;font-weight:800">${iniciais(u.nome||'EQ')}</div>`}</div>
           <div><label class="bt g" style="cursor:pointer">Foto de perfil<input type="file" accept="image/*" style="display:none" onchange="pegarFotoEquipe(this)"></label>
           <div class="ajuda" style="margin-top:6px">Imagem opcional, privada e reduzida automaticamente.</div></div></div>
         <div class="gr-form">
@@ -2381,7 +2414,7 @@ function formPapel(uid){
           outra pessoa</b>, senão a autoria dos registros deixa de valer alguma coisa.</div>
       </div></div>`;
   avisoPapel();
-  ir('org', { titulo:'Equipe e acessos', sub: novo?'Nova pessoa na equipe':esc(u.nome) });
+  ir('org', { titulo:'Equipe e acessos', sub: novo?'Nova pessoa na equipe':esc(u.nome), voltar:()=>abrirInstituicao('equipe') });
 }
 async function pegarFotoEquipe(inp){const f=inp.files[0];if(!f)return;try{fotoEquipeNova=await prepararFotoPessoa(f);$('eq-foto-prev').innerHTML=`<img src="${fotoEquipeNova}" style="width:72px;height:72px;border-radius:50%;object-fit:cover">`;}catch(e){alert(e.message)}finally{inp.value='';}}
 function avisoPapel(){
@@ -3677,7 +3710,7 @@ function montarListaGestao(){
    ============================================================ */
 function podePublicarDiretiva(){ return ['presidente','coordenador','social'].includes(SESSAO.papel); }
 function atualizarBadgeDiretivas(){ const n=BD.diretivas.filter(d=>!d.lida).length, el=$('dir-n'); if(el)el.textContent=n; }
-let gravadorDiretiva=null,partesAudioDiretiva=[],timerAudioDiretiva=null,inicioAudioDiretiva=0,streamAudioDiretiva=null;
+let gravadorDiretiva=null,partesAudioDiretiva=[],timerAudioDiretiva=null,inicioAudioDiretiva=0,streamAudioDiretiva=null,descartandoAudioDiretiva=false;
 function abrirDiretivas(){
   const notificacoes=`<div class="pn"><div class="cx"><div class="linha"><div class="t"><b>Notificações neste aparelho</b><small>Receba orientações mesmo com o aplicativo fechado.</small></div><span class="sp"></span><button class="bt g" onclick="ativarPushUI()">Ativar notificações</button></div></div></div>`;
   const form=podePublicarDiretiva()?`<div class="pn"><div class="ph"><h2>Nova orientação</h2></div><div class="cx">
@@ -3686,11 +3719,11 @@ function abrirDiretivas(){
     <div class="cp"><label>Orientação <span class="op">— até 300 caracteres</span></label><textarea id="dir-texto" maxlength="300" rows="4" oninput="$('dir-resta').textContent=300-this.value.length"></textarea><div class="ajuda"><span id="dir-resta">300</span> caracteres restantes</div></div>
     <div class="cp"><label>Destinatários</label><select id="dir-destino"><option value="todos">Toda a equipe ativa</option><option value="escala_hoje">Somente a equipe presente na escala de hoje</option></select></div>
     <div class="linha"><button class="bt g" onclick="$('dir-img').click()">Anexar imagem</button><span id="dir-img-nome" class="sub"></span>
-      <button id="dir-audio-bt" class="bt g" onclick="alternarGravacaoDiretiva()">Gravar áudio</button><span id="dir-audio-tempo" class="sub">até 2 min</span><button class="bt" onclick="publicarDiretiva()">Publicar orientação</button></div>
+      <button id="dir-audio-bt" class="bt g bt-icone" onclick="alternarGravacaoDiretiva()" aria-label="Gravar áudio" title="Gravar áudio"><svg aria-hidden="true"><use href="#i-mic"/></svg></button><span id="dir-audio-tempo" class="sub">Gravar áudio · até 2 min</span><button class="bt" onclick="publicarDiretiva()">Publicar orientação</button></div>
     <div id="dir-audio-prev" style="margin-top:10px"></div>
   </div></div>`:'';
   const lista=BD.diretivas.map(d=>`<div class="pn"><div class="cx"><div class="linha"><span class="et ${d.prioridade==='urgente'?'rx':d.prioridade==='ordem_dia'?'av':'az'}">${d.prioridade==='urgente'?'Urgente':d.prioridade==='ordem_dia'?'Ordem do dia':'Recomendação'}</span><b>${esc(d.titulo)}</b><span class="sp"></span><span class="hr">${d.quando.toLocaleString('pt-BR')}</span></div>
-    <p style="font-size:14.5px;line-height:1.6;white-space:pre-wrap">${esc(d.texto)}</p>${d.anexo?`<a href="${d.anexo}" target="_blank" rel="noopener"><img src="${d.anexo}" style="max-width:260px;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--ln)"></a>`:''}
+    <p style="font-size:14.5px;line-height:1.6;white-space:pre-wrap">${esc(d.texto)}</p>${d.anexo?`<a href="${d.anexo}" target="_blank" rel="noopener"><img src="${d.anexo}" alt="Imagem anexada à orientação ${esc(d.titulo)}" style="max-width:260px;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--ln)"></a>`:''}
     ${d.audio?`<div style="margin:12px 0"><audio controls preload="metadata" src="${esc(d.audio)}" onplay="registrarAudicaoDiretiva('${d.id}')" style="width:min(100%,420px)"></audio><div class="ajuda">Áudio de até 2 minutos</div></div>`:''}
     ${(d.audicoes||[]).length?`<details style="margin:8px 0"><summary class="quem">Ouvido por ${(d.audicoes||[]).length} ${(d.audicoes||[]).length===1?'pessoa':'pessoas'}</summary>${d.audicoes.map(a=>`<div class="quem">${esc(a.equipe)} · ${a.quando.toLocaleString('pt-BR')}</div>`).join('')}</details>`:''}
     <div class="quem">Por ${esc(d.autor)} · ${d.destino==='escala_hoje'?'escala de hoje':'toda a equipe'}</div>
@@ -3706,20 +3739,21 @@ async function alternarGravacaoDiretiva(){
   if(gravadorDiretiva&&gravadorDiretiva.state==='recording'){encerrarGravacaoDiretiva();return;}
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){alert('Este aparelho não oferece gravação de áudio pelo navegador.');return;}
   try{
-    streamAudioDiretiva=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
+    descartandoAudioDiretiva=false;streamAudioDiretiva=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
     const opcoes=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'];
     const mime=opcoes.find(x=>MediaRecorder.isTypeSupported(x)); gravadorDiretiva=new MediaRecorder(streamAudioDiretiva,mime?{mimeType:mime,audioBitsPerSecond:64000}:undefined);
     partesAudioDiretiva=[]; gravadorDiretiva.ondataavailable=e=>{if(e.data.size)partesAudioDiretiva.push(e.data)};
     gravadorDiretiva.onstop=finalizarAudioDiretiva; inicioAudioDiretiva=Date.now(); gravadorDiretiva.start(500);
-    $('dir-audio-bt').textContent='Parar gravação'; $('dir-audio-bt').classList.remove('g');
+    $('dir-audio-bt').setAttribute('aria-label','Parar gravação');$('dir-audio-bt').title='Parar gravação'; $('dir-audio-bt').classList.remove('g');
     timerAudioDiretiva=setInterval(()=>{const s=Math.min(120,Math.floor((Date.now()-inicioAudioDiretiva)/1000));$('dir-audio-tempo').textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} / 2:00`;if(s>=120)encerrarGravacaoDiretiva();},250);
   }catch(e){alert(e.name==='NotAllowedError'?'Autorize o acesso ao microfone para gravar.':'Não foi possível iniciar a gravação.');}
 }
 function encerrarGravacaoDiretiva(){if(gravadorDiretiva?.state==='recording')gravadorDiretiva.stop();clearInterval(timerAudioDiretiva);streamAudioDiretiva?.getTracks().forEach(t=>t.stop());}
 function finalizarAudioDiretiva(){
+  if(descartandoAudioDiretiva){partesAudioDiretiva=[];descartandoAudioDiretiva=false;return;}
   const duracao=Math.min(120,Math.max(1,Math.ceil((Date.now()-inicioAudioDiretiva)/1000))),mime=gravadorDiretiva.mimeType||partesAudioDiretiva[0]?.type||'audio/webm';
   const blob=new Blob(partesAudioDiretiva,{type:mime}); if(blob.size>3145728){ctx.audioDiretiva=null;alert('A gravação ficou maior que 3 MB. Grave novamente em um ambiente mais silencioso.');return;}
-  const url=URL.createObjectURL(blob);ctx.audioDiretiva={blob,url,mime,duracao};$('dir-audio-bt').textContent='Gravar novamente';$('dir-audio-bt').classList.add('g');$('dir-audio-tempo').textContent=`${Math.floor(duracao/60)}:${String(duracao%60).padStart(2,'0')}`;$('dir-audio-prev').innerHTML=`<audio controls src="${url}" style="width:min(100%,420px)"></audio><div class="ajuda">Prévia da gravação · será enviada ao publicar</div>`;
+  const url=URL.createObjectURL(blob);ctx.audioDiretiva={blob,url,mime,duracao};$('dir-audio-bt').setAttribute('aria-label','Gravar novamente');$('dir-audio-bt').title='Gravar novamente';$('dir-audio-bt').classList.add('g');$('dir-audio-tempo').textContent=`Gravação pronta · ${Math.floor(duracao/60)}:${String(duracao%60).padStart(2,'0')}`;$('dir-audio-prev').innerHTML=`<audio controls src="${url}" style="width:min(100%,420px)"></audio><div class="ajuda">Prévia da gravação · será enviada ao publicar</div>`;
 }
 async function publicarDiretiva(){ const titulo=$('dir-titulo').value.trim(),texto=$('dir-texto').value.trim(); if(!titulo||!texto){alert('Informe título e orientação.');return;}
   if(gravadorDiretiva?.state==='recording'){alert('Pare a gravação antes de publicar.');return;}
@@ -3743,7 +3777,7 @@ function verDoacoesHoje(){ ctx.doModo = 'hoje'; ctx.formDoacao = null; montarDoa
 function verDoacoesHistorico(){ ctx.doModo = 'historico'; ctx.formDoacao = null; montarDoacoes(); }
 function verEstoqueAtual(){ ctx.doModo = 'estoque'; ctx.formDoacao = null; montarDoacoes(); }
 function abrirFormDoacao(tipo){ ctx.formDoacao = tipo; ctx.anexosDoacao = []; montarDoacoes(); }
-function fecharFormDoacao(){ ctx.formDoacao = null; ctx.anexosDoacao = []; montarDoacoes(); }
+function fecharFormDoacao(){ ctx.formDoacao = null; ctx.anexosDoacao = []; acaoVoltarTela=null; montarDoacoes(); atualizarVoltar(); }
 function pegarAnexosDoacao(inp){
   [...inp.files].forEach(f => {
     if(!/^image\//.test(f.type)){ alert('Escolha uma imagem JPG, PNG ou WebP.'); return; }
@@ -3864,6 +3898,7 @@ function estoqueAtualHtml(){
     ${tabela}<div class="ph" style="margin-top:18px"><h2>Linha do tempo de entradas e saídas</h2><span class="sp"></span><span class="n" id="est-contagem">${ultimos30.length}</span></div><div id="est-linha">${ultimos30.sort((a,b)=>b.quando-a.quando).map(d=>detalhesMovimento(d)).join('')}</div>`;
 }
 function montarDoacoes(){
+  if(!ctx.formDoacao&&acaoVoltarTela===fecharFormDoacao){acaoVoltarTela=null;atualizarVoltar();}
   const hoje = iso(agora);
   const botoesRegistro = pode('doacoes') ? `<div class="acoes" style="margin-bottom:14px">
       <button class="bt g pq" onclick="abrirFormDoacao('entrada')">Registrar entrada</button>
@@ -3878,7 +3913,7 @@ function montarDoacoes(){
   const form = ctx.formDoacao ? formDoacaoHtml(ctx.formDoacao) : '';
   if(ctx.doModo==='estoque'){
     $('d-corpo').innerHTML=`${botoesRegistro}${form}${abas}${estoqueAtualHtml()}`;
-    if(ctx.formDoacao) anexosDoacaoUI(); return;
+    if(ctx.formDoacao){anexosDoacaoUI();definirVoltar(fecharFormDoacao);} return;
   }
   if(ctx.doModo === 'hoje'){
     const doHoje = BD.doacoes.filter(d => iso(d.quando) === hoje).sort((a,b)=>b.quando-a.quando);
@@ -3913,7 +3948,7 @@ function montarDoacoes(){
     $('d-corpo').innerHTML = `<div class="gr3" style="margin-bottom:16px">${kpis}</div>
       ${botoesRegistro}${form}${abas}${tabela}`;
   }
-  if(ctx.formDoacao) anexosDoacaoUI();
+  if(ctx.formDoacao){anexosDoacaoUI();definirVoltar(fecharFormDoacao);}
 }
 function linhaDoacaoHoje(d){
   const l = LOCAIS.find(x=>x.id===d.local);
@@ -4152,6 +4187,6 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=18"></script>
+<script src="ponte-banco.js?v=19"></script>
 <script src="pwa.js?v=2"></script>
 </body></html>
