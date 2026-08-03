@@ -56,7 +56,7 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update
-          sudo apt-get install --yes age postgresql-client-17 zstd
+          sudo apt-get install --yes age expect postgresql-client-17 zstd
           aws --version
 
       - name: Validar configuração protegida
@@ -80,7 +80,17 @@ jobs:
       - name: Decifrar, extrair e validar integridade
         run: |
           set -euo pipefail
-          AGE_PASSPHRASE="$BACKUP_PASSPHRASE" age --decrypt --output "${RUNNER_TEMP}/backup.tar.zst" "${RUNNER_TEMP}/backup.age"
+          export INPUT_ARCHIVE="${RUNNER_TEMP}/backup.age" OUTPUT_ARCHIVE="${RUNNER_TEMP}/backup.tar.zst"
+          expect <<'EXPECT_EOF'
+          set timeout -1
+          log_user 0
+          spawn age --decrypt --output $env(OUTPUT_ARCHIVE) $env(INPUT_ARCHIVE)
+          expect "Enter passphrase"
+          send -- "$env(BACKUP_PASSPHRASE)\r"
+          expect eof
+          catch wait result
+          exit [lindex $result 3]
+          EXPECT_EOF
           zstd --decompress --stdout "${RUNNER_TEMP}/backup.tar.zst" | tar --directory="${RUNNER_TEMP}" --extract
           cd "${RUNNER_TEMP}/social360-backup"
           sha256sum --check SHA256SUMS
