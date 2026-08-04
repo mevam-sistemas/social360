@@ -646,6 +646,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
             </div>
             <div class="linha" style="margin-top:11px">
               <button class="bt g" onclick="novoCadastro()">Cadastrar pessoa</button>
+              <button class="bt g" onclick="abrirLeitorCarteirinha()">Ler carteirinha</button>
             </div>
             <div id="r0" style="margin-top:14px"></div>
           </div>
@@ -691,6 +692,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
             <input type="search" id="q" placeholder="Nome, apelido, CPF, RG, telefone ou código"
               autocomplete="off" style="padding-left:40px" oninput="buscarNo('q','r')">
           </div>
+          <div class="linha" style="margin-top:11px"><button class="bt g" onclick="abrirLeitorCarteirinha()">Ler carteirinha</button></div>
         </div></div>
         <div id="r"></div>
       </section>
@@ -1923,6 +1925,87 @@ function buscarNo(idIn, idOut){
         <td class="hr esconde">${u?dataCurta(u.quando):'nunca'}</td>
         <td class="num"><button class="bt pq" onclick="event.stopPropagation();irRegistrar('${p.id}')">Atender</button></td>
       </tr>`; }).join('')}</tbody></table></div>`;
+}
+
+/* ============================================================
+   Carteirinha — 85,60 × 53,98 mm, pronta para impressão a 300 dpi
+   ============================================================ */
+const CARTAO_W=1011,CARTAO_H=638;
+function payloadCarteirinha(p){return `360social:p:${p.id}`;}
+async function imagemLocal(src){
+  if(!src)return null;
+  try{const r=await fetch(src);if(!r.ok)throw new Error('imagem');return await createImageBitmap(await r.blob());}
+  catch(_){return null;}
+}
+function imagemCapa(ctx,img,x,y,w,h,raio){
+  const s=Math.max(w/img.width,h/img.height),sw=w/s,sh=h/s,sx=(img.width-sw)/2,sy=(img.height-sh)/2;
+  ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,raio);ctx.clip();ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);ctx.restore();
+}
+function qrCanvas(texto,tamanho){
+  const qr=qrcode(0,'M');qr.addData(texto,'Byte');qr.make();
+  const n=qr.getModuleCount(),m=4,cel=Math.max(1,Math.floor(tamanho/(n+m*2))),lado=(n+m*2)*cel;
+  const c=document.createElement('canvas');c.width=c.height=lado;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,lado,lado);x.fillStyle='#111';
+  for(let r=0;r<n;r++)for(let col=0;col<n;col++)if(qr.isDark(r,col))x.fillRect((col+m)*cel,(r+m)*cel,cel,cel);
+  return c;
+}
+function linhasCartao(ctx,texto,maxW,maxLinhas){
+  const palavras=String(texto).trim().split(/\s+/),linhas=[];let atual='';
+  for(const p of palavras){const teste=atual?atual+' '+p:p;if(ctx.measureText(teste).width<=maxW)atual=teste;else{if(atual)linhas.push(atual);atual=p;if(linhas.length===maxLinhas-1)break;}}
+  if(atual&&linhas.length<maxLinhas)linhas.push(atual);return linhas;
+}
+async function desenharCarteirinha(p){
+  const c=document.createElement('canvas');c.width=CARTAO_W;c.height=CARTAO_H;const x=c.getContext('2d');
+  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#F26A1B';x.fillRect(0,0,28,c.height);
+  x.fillStyle='#FFF3E9';x.beginPath();x.roundRect(52,42,907,554,36);x.fill();
+  const [foto,logo]=await Promise.all([imagemLocal(p.foto),imagemLocal(ORG.logo)]);
+  x.fillStyle='#fff';x.beginPath();x.roundRect(74,128,260,330,28);x.fill();
+  if(foto)imagemCapa(x,foto,84,138,240,310,22);else{x.fillStyle='#E7E9EC';x.beginPath();x.roundRect(84,138,240,310,22);x.fill();x.fillStyle='#6E737D';x.font='800 82px system-ui';x.textAlign='center';x.fillText(iniciais(p.nome),204,330);}
+  x.textAlign='left';x.fillStyle='#1A1C20';x.font='800 42px system-ui';
+  linhasCartao(x,p.nome,405,3).forEach((l,i)=>x.fillText(l,370,190+i*52));
+  x.fillStyle='#6E737D';x.font='650 23px system-ui';x.fillText('IDENTIFICAÇÃO INSTITUCIONAL',370,112);
+  x.fillStyle='#1A1C20';x.font='700 24px ui-monospace,monospace';x.fillText(p.codigo,370,380);
+  x.fillStyle='#6E737D';x.font='500 19px system-ui';x.fillText('Apresente esta carteirinha no atendimento',370,420);
+  const qr=qrCanvas(payloadCarteirinha(p),210);x.drawImage(qr,737,346,190,190);
+  x.fillStyle='#6E737D';x.font='600 16px system-ui';x.textAlign='center';x.fillText('Leia para localizar o cadastro',832,559);
+  x.textAlign='left';
+  if(logo)imagemCapa(x,logo,370,460,245,86,14);else{x.fillStyle='#F26A1B';x.font='850 31px system-ui';x.fillText(ORG.nome,370,512);}
+  x.strokeStyle='#D9DCE1';x.lineWidth=2;x.beginPath();x.roundRect(1,1,c.width-2,c.height-2,38);x.stroke();
+  return c;
+}
+async function abrirCarteirinha(pid){
+  const p=dados.pessoa(pid);if(!p)return;
+  const ov=document.createElement('div');ov.id='cartao-ov';ov.style.cssText='position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;display:grid;place-items:center;padding:18px;overflow:auto';
+  ov.innerHTML=`<div style="background:#fff;border-radius:18px;padding:22px;width:min(620px,100%);box-shadow:0 20px 60px rgba(0,0,0,.28)"><h2 style="margin:0 0 5px;font-size:19px">Carteirinha de identificação</h2><p style="margin:0 0 15px;color:var(--tx3);font-size:13px">Tamanho final: 85,60 × 53,98 mm. Arquivo preparado em 300 dpi.</p><div id="cartao-prev" style="aspect-ratio:85.6/53.98;background:var(--b2);border-radius:12px;display:grid;place-items:center;overflow:hidden">Preparando…</div><div class="linha" style="margin-top:16px"><button class="bt" id="cartao-png">Baixar PNG</button><button class="bt g" id="cartao-pdf">Baixar PDF</button><button class="bt g" onclick="fecharCarteirinha()">Fechar</button></div></div>`;
+  document.body.appendChild(ov);ov.onclick=e=>{if(e.target===ov)fecharCarteirinha();};
+  try{const c=await desenharCarteirinha(p);c.style.cssText='width:100%;height:100%;object-fit:contain';$('cartao-prev').textContent='';$('cartao-prev').appendChild(c);$('cartao-png').onclick=()=>baixarCanvas(c,`carteirinha-${p.codigo}.png`);$('cartao-pdf').onclick=()=>baixarPdfCartao(c,`carteirinha-${p.codigo}.pdf`);}catch(e){$('cartao-prev').textContent='Não foi possível montar a carteirinha.';console.error(e);}
+}
+function fecharCarteirinha(){const e=$('cartao-ov');if(e)e.remove();}
+function baixarCanvas(c,nome){c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);},'image/png');}
+function bytesAscii(s){return Uint8Array.from([...s].map(c=>c.charCodeAt(0)));}
+function baixarPdfCartao(c,nome){
+  const jpg=Uint8Array.from(atob(c.toDataURL('image/jpeg',.96).split(',')[1]),ch=>ch.charCodeAt(0));
+  const fluxo=bytesAscii('q 242.65 0 0 153.01 0 0 cm /Im0 Do Q');
+  const objs=[null,bytesAscii('<< /Type /Catalog /Pages 2 0 R >>'),bytesAscii('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),bytesAscii('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 242.65 153.01] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>'),null,null];
+  objs[4]=[bytesAscii(`<< /Type /XObject /Subtype /Image /Width ${c.width} /Height ${c.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`),jpg,bytesAscii('\nendstream')];
+  objs[5]=[bytesAscii(`<< /Length ${fluxo.length} >>\nstream\n`),fluxo,bytesAscii('\nendstream')];
+  const partes=[bytesAscii('%PDF-1.4\n')],offs=[0];let pos=partes[0].length;
+  for(let i=1;i<=5;i++){offs[i]=pos;const ini=bytesAscii(`${i} 0 obj\n`),fim=bytesAscii('\nendobj\n');partes.push(ini);pos+=ini.length;const mi=Array.isArray(objs[i])?objs[i]:[objs[i]];mi.forEach(b=>{partes.push(b);pos+=b.length;});partes.push(fim);pos+=fim.length;}
+  const xref=pos;let tabela='xref\n0 6\n0000000000 65535 f \n';for(let i=1;i<=5;i++)tabela+=String(offs[i]).padStart(10,'0')+' 00000 n \n';tabela+=`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  partes.push(bytesAscii(tabela));const blob=new Blob(partes,{type:'application/pdf'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+let leitorFluxo=null,leitorTimer=null;
+async function abrirLeitorCarteirinha(){
+  fecharLeitorCarteirinha();const ov=document.createElement('div');ov.id='leitor-ov';ov.style.cssText='position:fixed;inset:0;background:rgba(15,12,8,.6);z-index:9998;display:grid;place-items:center;padding:18px';
+  ov.innerHTML=`<div style="background:#fff;border-radius:18px;padding:22px;width:min(520px,100%)"><h2 style="margin:0 0 5px;font-size:19px">Ler carteirinha</h2><p id="leitor-msg" style="margin:0 0 13px;color:var(--tx3);font-size:13px">Aponte a câmera para o QR code.</p><video id="leitor-video" autoplay playsinline muted style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;background:#111"></video><div class="cp" style="margin-top:13px"><label>Ou digite/escaneie o código</label><input id="leitor-codigo" placeholder="Ex.: SV-1000" onkeydown="if(event.key==='Enter')identificarCarteirinha(this.value)"></div><div class="linha"><button class="bt" onclick="identificarCarteirinha($('leitor-codigo').value)">Localizar</button><button class="bt g" onclick="fecharLeitorCarteirinha()">Cancelar</button></div></div>`;document.body.appendChild(ov);
+  if(!('BarcodeDetector'in window)){$('leitor-msg').textContent='A leitura nativa de QR não está disponível neste navegador. Digite o código impresso abaixo.';$('leitor-video').style.display='none';$('leitor-codigo').focus();return;}
+  try{const formatos=await BarcodeDetector.getSupportedFormats();if(!formatos.includes('qr_code'))throw new Error('QR não suportado');const det=new BarcodeDetector({formats:['qr_code']});leitorFluxo=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('leitor-video').srcObject=leitorFluxo;const ler=async()=>{if(!$('leitor-video'))return;try{const rs=await det.detect($('leitor-video'));if(rs[0])return identificarCarteirinha(rs[0].rawValue);}catch(_){}leitorTimer=setTimeout(ler,250);};ler();}catch(e){$('leitor-msg').textContent='Não consegui usar a câmera para ler o QR. Digite o código impresso abaixo.';$('leitor-video').style.display='none';$('leitor-codigo').focus();}
+}
+function fecharLeitorCarteirinha(){if(leitorTimer)clearTimeout(leitorTimer);leitorTimer=null;if(leitorFluxo)leitorFluxo.getTracks().forEach(t=>t.stop());leitorFluxo=null;const e=$('leitor-ov');if(e)e.remove();}
+function identificarCarteirinha(valor){
+  const v=String(valor||'').trim();let p=null;if(v.startsWith('360social:p:'))p=dados.pessoa(v.slice(12));if(!p)p=dados.buscarPessoas(v)[0];
+  if(!p){const m=$('leitor-msg');if(m){m.textContent='Carteirinha não encontrada nesta instituição.';m.style.color='var(--err)';}return;}
+  fecharLeitorCarteirinha();abrirPessoa(p.id);
 }
 
 /* ============================================================
@@ -3488,7 +3571,8 @@ function abrirPessoa(pid, av2){
     + (pode('criar_tecnico')
         ? `<button class="bt g" onclick="irTecnico()">Registro de trabalho</button>`:'')
     + (pode('editar_pessoa')
-        ? `<button class="bt g" onclick="formEditar('${pid}')">Editar cadastro</button>`:'');
+        ? `<button class="bt g" onclick="formEditar('${pid}')">Editar cadastro</button>`:'')
+    + `<button class="bt g" onclick="abrirCarteirinha('${pid}')">Carteirinha</button>`;
   ir('pessoa', { titulo: p.apelido || p.nome, sub: 'Prontuário · '+p.codigo, acoes });
 }
 function entrarAqui(pid){
@@ -4233,6 +4317,7 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=25"></script>
+<script src="qrcode.js?v=1"></script>
+<script src="ponte-banco.js?v=26"></script>
 <script src="pwa.js?v=2"></script>
 </body></html>
