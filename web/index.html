@@ -602,7 +602,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <nav id="l-nav"></nav>
     <div class="selo-nosso">
       <svg><use href="#s360"/></svg>
-      <span>Roda em <b>360<i>social</i></b><br>Arbor Labs · feito no Brasil · v1.2.1<br>
+      <span>Roda em <b>360<i>social</i></b><br>Arbor Labs · feito no Brasil · <span id="versao-app"></span><br>
         <a href="https://360social.com.br/legal.html" target="_blank" rel="noopener">Termos e privacidade</a></span>
     </div>
     <div class="rodape-l">
@@ -949,7 +949,9 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 <div class="barra-m" id="barra-m"></div>
 <div class="lupa" id="lupa" onclick="fecharLupa()"><div class="cx2" id="lupa-cx"></div></div>
 
+<script src="version.js"></script>
 <script>
+document.getElementById('versao-app').textContent='v'+self.SOCIAL360_VERSION;
 /* ============================================================
    Base de demonstração — Instituto Humanitário e Educativo SOS Vida
    Itajaí, SC.

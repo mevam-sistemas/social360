@@ -2,6 +2,14 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.3.0 — 2026-08-04
+
+- Versão do rodapé e cache do PWA passam a ler uma única fonte publicada.
+- Presidência pode alternar pontos de vista sem alterar as permissões reais.
+- Equipe aceita múltiplas funções e novos cargos operacionais.
+- Cadastro de pessoas pode gerar carteirinha com QR code.
+- Melhorias de permissões, fotos, navegação e acompanhamento institucional.
+
 ## 1.2.1 — 2026-08-03
 
 - Convite automático e seguro ao conceder acesso para uma pessoa da equipe.
