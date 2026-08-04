@@ -2,6 +2,13 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.1 — 2026-08-04
+
+- A configuração de e-mail deixa de oferecer um endereço de envio fictício; o remetente técnico é informado como gerenciado pela Arbor Labs.
+- Automações de e-mail ainda não implantadas passam a aparecer como planejadas e desabilitadas, sem sugerir que estão enviando mensagens.
+- Validação automatizada passa a conferir versão, PWA, autenticação, recursos críticos e ausência de segredos de servidor no cliente.
+- Registro operacional atualizado com a confirmação do acesso presidencial e as evidências mais recentes de backup e restauração.
+
 ## 1.4.0 — 2026-08-04
 
 - Data de nascimento disponível no cadastro da equipe.

@@ -2,6 +2,16 @@
 
 Este documento registra mudanças relevantes, evidências de validação e pendências humanas. Segredos, tokens e links temporários de autenticação nunca devem ser registrados aqui.
 
+## 2026-08-04 — versão 1.4.1
+
+### Transparência dos envios e verificações de release
+
+- O endereço técnico de envio deixou de ser um campo fictício editável na interface.
+- Automações ainda não implantadas aparecem desabilitadas e identificadas como planejadas.
+- O release ganhou verificação automática de versão, PWA, fluxos de autenticação, recursos críticos e exposição de credenciais.
+- Backups independentes concluídos nas execuções [30865796732](https://github.com/mevam-sistemas/social360/actions/runs/30865796732) e [30883014954](https://github.com/mevam-sistemas/social360/actions/runs/30883014954).
+- Restauração conjunta de Modox e 360social comprovada na execução [30861809522](https://github.com/mevam-sistemas/social360/actions/runs/30861809522).
+
 ## 2026-08-04 — versão 1.3.0
 
 ### Versão única e atualização do PWA
@@ -18,7 +28,7 @@ Este documento registra mudanças relevantes, evidências de validação e pend�
 - Causa: 360social e Modox compartilham o projeto de autenticação; o endereço padrão pertence à PlataformaX/Modox e a variação solicitada pelo 360social não estava integralmente contemplada na lista de redirecionamentos.
 - Correção: autorização de `https://app.360social.com.br/**` no Supabase e uso do domínio exato nos fluxos de recuperação, cadastro e convite.
 - Validação: recuperação executada com conta controlada; o link recebido terminou em `app.360social.com.br` e abriu a tela “Escolher nova senha”. Nenhuma senha de teste foi alterada.
-- Situação do Edson: novo link emitido somente após o teste completo; confirmação pessoal de sucesso ainda pendente.
+- Situação do Edson: acesso presidencial confirmado pelo responsável da instituição após a correção.
 
 ### Convites e vínculos da equipe
 
