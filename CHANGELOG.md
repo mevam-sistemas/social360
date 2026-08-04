@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.2 — 2026-08-04
+
+- A governança do banco compartilhado passa a apontar o CT360 como fonte canônica das 44 migrações alinhadas.
+- Quinze versões já comprovadas no banco foram incorporadas ao histórico remoto sem reexecutar SQL ou alterar dados.
+- Este repositório deixa de ser origem autorizada para `supabase db push`, evitando divergência entre produtos.
+
 ## 1.4.1 — 2026-08-04
 
 - A configuração de e-mail deixa de oferecer um endereço de envio fictício; o remetente técnico é informado como gerenciado pela Arbor Labs.

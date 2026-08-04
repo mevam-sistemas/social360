@@ -1,5 +1,14 @@
 # Operação segura do 360social
 
+## Banco compartilhado
+
+- Modox (`public`), 360social (`social`) e CT360 (`ct360`) usam o mesmo projeto Supabase.
+- A fonte canônica das migrações fica em `mevam-sistemas/ct360/supabase/migrations`, com verificação
+  automática do histórico local e remoto.
+- Os SQLs locais são cópias históricas. Mudanças novas devem nascer no repositório CT360, com
+  schema explícito; nunca executar `supabase db push` a partir deste repositório nem aplicar SQL
+  manualmente no Dashboard.
+
 ## Versionamento
 
 - `MAIOR`: mudança incompatível ou grande reformulação.
