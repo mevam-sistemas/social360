@@ -1156,11 +1156,17 @@ const PROFISSIONAIS = ['Cláudia Marques','Fernanda Dias'];
    descritivo: NUNCA usado para decidir permissão. Quem decide o que a
    pessoa pode fazer no sistema é sempre o papel, na lista abaixo. */
 const FUNCOES = [
-  { id:'f1', nome:'Cozinheiro',          ativa:true },
-  { id:'f2', nome:'Auxiliar de cozinha', ativa:true },
-  { id:'f3', nome:'Assistente Social',   ativa:true },
-  { id:'f4', nome:'Voluntário',          ativa:true },
-  { id:'f5', nome:'Coordenador',         ativa:true }
+  { id:'f1',  nome:'Advogado',          ativa:true },
+  { id:'f2',  nome:'Assistente Social', ativa:true },
+  { id:'f3',  nome:'Aux. Cozinha',      ativa:true },
+  { id:'f4',  nome:'Aux. Limpeza',      ativa:true },
+  { id:'f5',  nome:'Aux. Louça',        ativa:true },
+  { id:'f6',  nome:'Barbeiro',          ativa:true },
+  { id:'f7',  nome:'Coordenador',       ativa:true },
+  { id:'f8',  nome:'Cozinheiro',        ativa:true },
+  { id:'f9',  nome:'Psicólogo',         ativa:true },
+  { id:'f10', nome:'Recepcionista',     ativa:true },
+  { id:'f11', nome:'Voluntário',        ativa:true }
 ];
 
 /* A equipe. Cada pessoa tem UM papel — papel acumulado é a porta dos
@@ -1180,7 +1186,7 @@ const EQUIPE = [
   { id:'u5', nome:'Ana Beatriz Rocha',   papel:'operador',    email:'ana@sosvida.org.br',
     unidade:'Restaurante Comunitário', funcao:'Cozinheiro', status:'ativo', acesso:'sim', desde:'2022-04-18' },
   { id:'u6', nome:'Carlos Mendes',       papel:'operador',    email:'carlos@sosvida.org.br',
-    unidade:'Restaurante Comunitário', funcao:'Auxiliar de cozinha', status:'ativo', acesso:'sim', desde:'2024-01-09' },
+    unidade:'Restaurante Comunitário', funcao:'Aux. Cozinha', status:'ativo', acesso:'sim', desde:'2024-01-09' },
   { id:'u7', nome:'Marlene Küster',      papel:'operador',    email:'marlene@sosvida.org.br',
     unidade:'Ação de rua', funcao:'Voluntário', status:'ativo', acesso:'sim', desde:'2023-05-22' },
   { id:'u8', nome:'Paulo Henrique Dias', papel:'operador',    email:'paulo@sosvida.org.br',
@@ -2393,7 +2399,8 @@ function formPapel(uid){
           <label class="cp"><span>Função — cargo, só rótulo <span class="op">— opcional</span></span>
             <select id="eq-funcao">
               <option value="">Sem função definida</option>
-              ${FUNCOES.filter(f=>f.ativa || f.nome===u.funcao).map(f=>
+              ${FUNCOES.filter(f=>f.ativa || f.nome===u.funcao)
+                .sort((a,b)=>a.nome.localeCompare(b.nome, 'pt-BR')).map(f=>
                 `<option ${u.funcao===f.nome?'selected':''}>${esc(f.nome)}</option>`).join('')}
             </select></label>
           <label class="cp"><span>Unidade</span>
@@ -3061,7 +3068,11 @@ function formPresencaEquipe(localId){
         ${elegiveis.map(u => `<option value="${u.id}">${esc(u.nome)}${u.funcao?' — '+esc(u.funcao):''}</option>`).join('')}
       </select></div>
       <div class="cp"><label>Função no turno <span class="op">— opcional</span></label>
-        <input id="pe-funcao" placeholder="Usa a função cadastrada se deixar em branco"></div>
+        <select id="pe-funcao">
+          <option value="">Usar a função cadastrada da pessoa</option>
+          ${FUNCOES.filter(f=>f.ativa).sort((a,b)=>a.nome.localeCompare(b.nome, 'pt-BR'))
+            .map(f=>`<option value="${esc(f.nome)}">${esc(f.nome)}</option>`).join('')}
+        </select></div>
     </div>
     ${ctx.formPEModo === 'falta' ? `<div class="cp"><label>Observação</label>
       <textarea id="pe-obs" rows="2" placeholder="Ex.: avisou de manhã, sem transporte..."></textarea></div>` : ''}
