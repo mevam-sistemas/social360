@@ -1,9 +1,11 @@
 /* 360social PWA — somente a interface pública entra no cache.
    Dados do Supabase, fotos, documentos e prontuários nunca são interceptados. */
-importScripts('/version.js');
-const VERSAO = '360social-shell-v' + self.SOCIAL360_VERSION;
+// Fonte canônica da versão. O rodapé lê este mesmo arquivo, evitando que
+// interface e cache do PWA mostrem números diferentes.
+const SOCIAL360_VERSION = '1.4.0';
+const VERSAO = '360social-shell-v' + SOCIAL360_VERSION;
 const SHELL = [
-  '/', '/manifest.json', '/version.js', '/supabase.min.js', '/qrcode.js?v=1', '/ponte-banco.js?v=26', '/pwa.js?v=2',
+  '/', '/manifest.json', '/supabase.min.js', '/qrcode.js?v=1', '/ponte-banco.js?v=26', '/pwa.js?v=2',
   '/marca/icone-laranja.svg', '/marca/png/icone-laranja-180.png',
   '/marca/png/icone-laranja-192.png', '/marca/png/icone-laranja-512.png'
 ];

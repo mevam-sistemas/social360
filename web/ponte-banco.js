@@ -463,7 +463,7 @@ async function carregarTudo(){
   if(caminhosEq.length){const {data}=await sbc.storage.from('fotos-equipe').createSignedUrls(caminhosEq,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsEq.set(x.path,x.signedUrl);});}
   eqp.forEach(u => { const funcoes=(funcoesPorEquipe.get(u.id)||[]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const funcao=funcoes[0]||nomeFuncao(u.funcao_id);
-    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, foto:urlsEq.get(u.foto_url)||null,fotoPath:u.foto_url||null,
+    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, nascimento:u.nascimento||'', foto:urlsEq.get(u.foto_url)||null,fotoPath:u.foto_url||null,
     papel: P_DB2TELA[u.papel] || 'operador',
     unidade: u.unidade_id ? ((LOCAIS.find(l => l.id === u.unidade_id) || {}).curto || 'Todas') : 'Todas',
     funcao, funcoes:funcoes.length?funcoes:(funcao?[funcao]:[]),
@@ -531,7 +531,7 @@ async function carregarTudo(){
     (assinados||[]).forEach(x=>{if(x.signedUrl)urlsDocs.set(x.path,x.signedUrl);}); }
   BD.pessoas.length = 0;
   pes.filter(p => !p.arquivada).forEach(p => BD.pessoas.push({ id:p.id, nome:p.nome,
-    apelido:p.apelido||'', nasc:p.nascimento||'', tel:p.telefone||'', cpf:p.cpf||'', sexo:p.sexo||null,
+    apelido:p.apelido||'', nasc:p.nascimento||'', tel:p.telefone||'', email:p.email||'', cpf:p.cpf||'', sexo:p.sexo||null,
     rg:p.rg||'', rgOrgao:p.rg_orgao||'', rgUf:p.rg_uf||'', semDocumentos:!!p.sem_documentos,
     situacaoRua:p.situacao_rua, cep:p.cep||'', logradouro:p.logradouro||'', numero:p.numero||'',
     complemento:p.complemento||'', bairro:p.bairro||'', cidade:p.cidade||'', estado:p.estado||'',
@@ -655,7 +655,7 @@ dados.criarPessoa = async function(p){
   if(!CONEXAO.ligada) return demoDados.criarPessoa(p);
   const id = crypto.randomUUID();
   const novo = Object.assign({ id, codigo: proximoCodigo(), criado:new Date(),
-    apelido:'', nasc:'', tel:'', cpf:'', rg:'', rgOrgao:'', rgUf:'', semDocumentos:false,
+    apelido:'', nasc:'', tel:'', email:'', cpf:'', rg:'', rgOrgao:'', rgUf:'', semDocumentos:false,
     situacaoRua:null, cep:'', logradouro:'', numero:'', complemento:'', bairro:'', cidade:'', estado:'',
     referenciaEndereco:'', foto:null, fotoPath:null, obs:'', docs:[] }, p, { id });
   novo.codigo = novo.codigo || proximoCodigo();
@@ -664,7 +664,7 @@ dados.criarPessoa = async function(p){
   for(const doc of (novo.docs||[]))docsSalvos.push(await salvarArquivoDocumentoPessoa(doc,id));
   const { error }=await sbc.from('pessoas').insert({ id, instituicao_id:CONEXAO.orgId, codigo:novo.codigo,
     nome:novo.nome, apelido:novo.apelido||null, nascimento:novo.nasc||null,
-    telefone:novo.tel||null, cpf:novo.cpf||null, sexo:novo.sexo||null, observacao:novo.obs||null,
+    telefone:novo.tel||null, email:novo.email||null, cpf:novo.cpf||null, sexo:novo.sexo||null, observacao:novo.obs||null,
     rg:novo.rg||null,rg_orgao:novo.rgOrgao||null,rg_uf:novo.rgUf||null,sem_documentos:!!novo.semDocumentos,
     situacao_rua:novo.situacaoRua,cep:novo.cep||null,logradouro:novo.logradouro||null,numero:novo.numero||null,
     complemento:novo.complemento||null,bairro:novo.bairro||null,cidade:novo.cidade||null,estado:novo.estado||null,
@@ -862,7 +862,7 @@ function sincronizarPessoa(pid){
   if(!CONEXAO.ligada) return;
   const p = dados.pessoa(pid); if(!p) return;
   pushDB(sbc.from('pessoas').update({ nome:p.nome, apelido:p.apelido||null, nascimento:p.nasc||null,
-    telefone:p.tel||null, cpf:p.cpf||null, sexo:p.sexo||null, observacao:p.obs||null,
+    telefone:p.tel||null, email:p.email||null, cpf:p.cpf||null, sexo:p.sexo||null, observacao:p.obs||null,
     rg:p.rg||null,rg_orgao:p.rgOrgao||null,rg_uf:p.rgUf||null,sem_documentos:!!p.semDocumentos,
     situacao_rua:p.situacaoRua,cep:p.cep||null,logradouro:p.logradouro||null,numero:p.numero||null,
     complemento:p.complemento||null,bairro:p.bairro||null,cidade:p.cidade||null,estado:p.estado||null,
@@ -881,7 +881,7 @@ salvarEdicao = async function(){
 const demoSalvarPapel = salvarPapel;
 salvarPapel = async function(uid){
   if(!CONEXAO.ligada) return demoSalvarPapel(uid);
-  const nome = $('eq-nome').value.trim(), email = $('eq-email').value.trim().toLowerCase(),
+  const nome = $('eq-nome').value.trim(), email = $('eq-email').value.trim().toLowerCase(), nascimento=$('eq-nascimento').value||null,
         papel = $('eq-papel').value, obs = $('eq-obs').value.trim(), unid = $('eq-unidade').value,
         funcoes = [...document.querySelectorAll('[name="eq-funcao"]:checked')].map(e=>e.value),
         funcao = funcoes[0] || '', acesso = $('eq-acesso').value;
@@ -896,22 +896,22 @@ salvarPapel = async function(uid){
   if(fotoEquipeNova){fotoPath=`${CONEXAO.orgId}/${idAlvo}/perfil-${Date.now()}.webp`;const up=await sbc.storage.from('fotos-equipe').upload(fotoPath,blobDeDataUrl(fotoEquipeNova),{contentType:'image/webp'});if(up.error){alert(up.error.message);return;}const sg=await sbc.storage.from('fotos-equipe').createSignedUrl(fotoPath,3600);fotoUrl=sg.data?.signedUrl||fotoEquipeNova;}
   if(u){
     const {error}=await sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
-      observacao:obs||null, unidade_id:unidId, tem_acesso:temAcesso,
+      observacao:obs||null, unidade_id:unidId, tem_acesso:temAcesso, nascimento,
       foto_url:fotoPath, ...(temAcesso?{}:{auth_id:null}) })
       .eq('id', uid).eq('instituicao_id', CONEXAO.orgId);
     if(error){console.error('[banco] equipe',error);alert('Não foi possível salvar o acesso. Tente novamente.');return;}
     const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:uid,p_funcoes:funcaoIds});
     if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('Os dados foram salvos, mas não foi possível atualizar as funções.');return;}
-    Object.assign(u, { nome, email, papel, funcao, funcoes, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
+    Object.assign(u, { nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
   } else {
     const id = idAlvo;
     const {error}=await sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
-      papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId,
+      papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId, nascimento,
       tem_acesso:temAcesso,foto_url:fotoPath });
     if(error){console.error('[banco] equipe',error);alert('Não foi possível adicionar a pessoa à equipe.');return;}
     const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:id,p_funcoes:funcaoIds});
     if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('A pessoa foi adicionada, mas não foi possível salvar as funções.');return;}
-    EQUIPE.push({ id, nome, email, papel, funcao, funcoes, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
+    EQUIPE.push({ id, nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
   }
   let acessoMsg = temAcesso ? 'Preparando o convite…' : 'Cadastro salvo sem acesso ao sistema.';
   if(temAcesso){
