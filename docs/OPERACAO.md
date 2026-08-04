@@ -5,8 +5,8 @@
 - `MAIOR`: mudança incompatível ou grande reformulação.
 - `MENOR`: funcionalidade nova compatível.
 - `CORREÇÃO`: correção sem nova funcionalidade.
-- Toda mudança publicada deve atualizar `SOCIAL360_VERSION` em `web/version.js` e `CHANGELOG.md`.
-- Rodapé e service worker leem `web/version.js`; não repetir a versão manualmente no HTML.
+- Toda mudança publicada deve atualizar `SOCIAL360_VERSION` em `web/sw.js` e `CHANGELOG.md`.
+- O rodapé lê a versão diretamente de `web/sw.js`, a mesma fonte usada pelo cache do PWA.
 - A versão deve receber uma tag Git, por exemplo `v1.1.0`.
 
 ## Fluxo de publicação recomendado

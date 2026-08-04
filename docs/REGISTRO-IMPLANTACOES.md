@@ -6,7 +6,7 @@ Este documento registra mudanças relevantes, evidências de validação e pend�
 
 ### Versão única e atualização do PWA
 
-- Rodapé, cache do PWA e aviso de atualização passaram a usar `web/version.js`.
+- Rodapé, cache do PWA e aviso de atualização passaram a usar a fonte canônica em `web/sw.js`.
 - O número fixo `v1.2.1` foi removido do HTML.
 - Uma mudança futura de versão exige alteração em um único arquivo publicado.
 

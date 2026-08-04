@@ -727,6 +727,8 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
               <div class="cp"><label>Nascimento <span class="op">— se souber</span></label><input type="date" id="cad-nasc"></div>
               <div class="cp"><label>Telefone</label><input type="tel" id="cad-tel" placeholder="(47) 90000-0000" inputmode="tel"></div>
             </div>
+            <div class="cp"><label>E-mail <span class="op">— opcional; usado também para felicitação de aniversário</span></label>
+              <input type="email" id="cad-email" placeholder="pessoa@exemplo.com"></div>
             <label style="display:flex;align-items:center;gap:9px;margin-bottom:13px;font-size:13.5px"><input id="cad-sem-doc" type="checkbox" onchange="alternarDocumentosCad()" style="width:auto"> Sem documentos no momento</label>
             <div class="par" id="cad-doc-cx">
               <div class="cp"><label>CPF <span class="op">— se houver</span></label><input type="text" id="cad-cpf" placeholder="000.000.000-00" inputmode="numeric"></div>
@@ -949,9 +951,11 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 <div class="barra-m" id="barra-m"></div>
 <div class="lupa" id="lupa" onclick="fecharLupa()"><div class="cx2" id="lupa-cx"></div></div>
 
-<script src="version.js"></script>
 <script>
-document.getElementById('versao-app').textContent='v'+self.SOCIAL360_VERSION;
+fetch('/sw.js',{cache:'no-store'}).then(r=>r.text()).then(t=>{
+  const m=t.match(/SOCIAL360_VERSION\s*=\s*['"]([^'"]+)['"]/);
+  if(m)document.getElementById('versao-app').textContent='v'+m[1];
+}).catch(()=>{});
 /* ============================================================
    Base de demonstração — Instituto Humanitário e Educativo SOS Vida
    Itajaí, SC.
@@ -2505,6 +2509,8 @@ function formPapel(uid){
             <input id="eq-nome" value="${esc(u.nome)}"></label>
           <label class="cp"><span>E-mail</span>
             <input id="eq-email" type="email" value="${esc(u.email)}"></label>
+          <label class="cp"><span>Data de nascimento <span class="op">— para felicitação de aniversário</span></span>
+            <input id="eq-nascimento" type="date" value="${esc(u.nascimento||'')}"></label>
           <label class="cp"><span>Papel — decide o que pode fazer no sistema</span>
             <select id="eq-papel" onchange="avisoPapel()">
               ${ordem.map(p=>`<option value="${p}" ${u.papel===p?'selected':''}>${ROTULO_PAPEL[p]}</option>`).join('')}
@@ -2553,6 +2559,7 @@ function avisoPapel(){
 function salvarPapel(uid){
   const nome = $('eq-nome').value.trim();
   const email = $('eq-email').value.trim();
+  const nascimento = $('eq-nascimento').value || null;
   const papel = $('eq-papel').value;
   const funcoes = [...document.querySelectorAll('[name="eq-funcao"]:checked')].map(e=>e.value);
   const funcao = funcoes[0] || '';
@@ -2560,8 +2567,8 @@ function salvarPapel(uid){
   const obs = $('eq-obs').value.trim();
   if(!nome){ $('eq-nome').focus(); return; }
   const u = EQUIPE.find(x => x.id === uid);
-  if(u){ Object.assign(u, { nome, email, papel, funcao, funcoes, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
-  else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, papel, funcao, funcoes, acesso, obs,
+  if(u){ Object.assign(u, { nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
+  else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, nascimento, papel, funcao, funcoes, acesso, obs,
     unidade:$('eq-unidade').value, status:'ativo', desde: iso(new Date()),foto:fotoEquipeNova });
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',
@@ -2825,6 +2832,8 @@ function formEditar(pid){
           <input id="ed-nasc" type="date" value="${esc(p.nasc||'')}"></label>
         <label class="cp"><span>Telefone</span>
           <input id="ed-tel" value="${esc(p.tel||'')}"></label>
+        <label class="cp"><span>E-mail <span class="op">— opcional</span></span>
+          <input id="ed-email" type="email" value="${esc(p.email||'')}"></label>
         <label class="cp"><span>CPF</span>
           <input id="ed-cpf" inputmode="numeric" value="${esc(p.cpf||'')}"></label>
         <label class="cp"><span>RG</span><input id="ed-rg" value="${esc(p.rg||'')}"></label>
@@ -2891,10 +2900,13 @@ async function salvarEdicao(){
   const p = dados.pessoa(ctx.pessoa);
   const nome = $('ed-nome').value.trim();
   if(!nome){ $('ed-nome').focus(); return; }
+  const emailEd=$('ed-email').value.trim().toLowerCase();
+  if(emailEd && !emailEd.includes('@')){ $('ed-email').focus(); return; }
   p.nome    = nome;
   p.apelido = $('ed-apelido').value.trim();
   p.nasc    = $('ed-nasc').value;
   p.tel     = $('ed-tel').value.trim();
+  p.email   = emailEd;
   p.cpf     = $('ed-cpf').value.replace(/\D/g,'');
   p.rg      = $('ed-rg').value.trim(); p.rgOrgao=$('ed-rg-orgao').value.trim();
   p.rgUf    = $('ed-rg-uf').value.trim().toUpperCase(); p.semDocumentos=$('ed-sem-doc').checked;
@@ -3309,7 +3321,7 @@ function painelHistoricoLocal(l){
 function novoCadastro(){
   if(fluxoCam){ fluxoCam.getTracks().forEach(t=>t.stop()); fluxoCam=null; }
   ctx.foto = null; ctx.docsCadastro=[]; ctx.docPessoaAlvo=null;
-  ['cad-nome','cad-apelido','cad-nasc','cad-tel','cad-cpf','cad-rg','cad-rg-orgao','cad-rg-uf','cad-sexo','cad-obs',
+  ['cad-nome','cad-apelido','cad-nasc','cad-tel','cad-email','cad-cpf','cad-rg','cad-rg-orgao','cad-rg-uf','cad-sexo','cad-obs',
    'cad-moradia','cad-cep','cad-logradouro','cad-numero','cad-complemento','cad-bairro','cad-cidade','cad-estado','cad-referencia']
     .forEach(i => { if($(i)) $(i).value=''; });
   $('cad-sem-doc').checked=false; alternarDocumentosCad(); alternarMoradiaCad();
@@ -3418,9 +3430,11 @@ async function salvarCadastro(so){
   const nome = $('cad-nome').value.trim();
   if(!nome){ const m=$('cad-msg'); m.textContent='Preciso de pelo menos um nome, mesmo que seja o apelido.';
     m.style.display=''; return; }
+  const emailCad=$('cad-email').value.trim().toLowerCase();
+  if(emailCad && !emailCad.includes('@')){ const m=$('cad-msg');m.textContent='Confira o e-mail informado.';m.style.display='';$('cad-email').focus();return; }
   const moradia=$('cad-moradia').value, semDocumentos=$('cad-sem-doc').checked;
   try{ const p = await Promise.resolve(dados.criarPessoa({ nome, apelido:$('cad-apelido').value.trim(), nasc:$('cad-nasc').value,
-    tel:$('cad-tel').value.trim(), cpf:$('cad-cpf').value.replace(/\D/g,''),
+    tel:$('cad-tel').value.trim(), email:emailCad, cpf:$('cad-cpf').value.replace(/\D/g,''),
     rg:$('cad-rg').value.trim(), rgOrgao:$('cad-rg-orgao').value.trim(), rgUf:$('cad-rg-uf').value.trim().toUpperCase(), semDocumentos,
     sexo:$('cad-sexo').value || null, obs:$('cad-obs').value.trim(), foto:ctx.foto,
     situacaoRua:moradia==='rua'?true:moradia==='endereco'?false:null, cep:$('cad-cep').value.replace(/\D/g,''),

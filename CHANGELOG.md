@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.0 — 2026-08-04
+
+- Data de nascimento disponível no cadastro da equipe.
+- Felicitação cristã e afetiva de aniversário por e-mail, com versículo e controle anual contra duplicidade.
+- Rodapé passa a ler a versão diretamente do mesmo arquivo usado pelo cache do PWA.
+
 ## 1.3.0 — 2026-08-04
 
 - Versão do rodapé e cache do PWA passam a ler uma única fonte publicada.
