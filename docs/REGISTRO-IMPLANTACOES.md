@@ -2,6 +2,14 @@
 
 Este documento registra mudanças relevantes, evidências de validação e pendências humanas. Segredos, tokens e links temporários de autenticação nunca devem ser registrados aqui.
 
+## 2026-08-04 — custódia central do banco compartilhado
+
+- Identificado que Modox, 360social e CT360 usam o mesmo projeto Supabase em schemas separados.
+- As migrações passaram a ter fonte canônica única em `mevam-sistemas/ct360`.
+- Quinze versões aplicadas manualmente foram verificadas por objetos reais e registradas como
+  aplicadas, sem executar novamente SQL ou alterar dados.
+- Resultado: 44 migrações locais e remotas alinhadas e verificáveis por comando automatizado.
+
 ## 2026-08-04 — versão 1.4.1
 
 ### Transparência dos envios e verificações de release
