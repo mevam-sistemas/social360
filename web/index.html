@@ -1194,6 +1194,10 @@ const EQUIPE = [
   { id:'u9', nome:'Rodrigo Sales',       papel:'operador',    email:'rodrigo@sosvida.org.br',
     unidade:'Centro Comunitário', funcao:'Voluntário', status:'inativo', acesso:'sim', desde:'2022-11-30' }
 ];
+function funcoesDaPessoa(u){
+  return (u&&Array.isArray(u.funcoes)&&u.funcoes.length ? u.funcoes : (u&&u.funcao?[u.funcao]:[]));
+}
+function rotuloFuncoesPessoa(u){ return funcoesDaPessoa(u).join(' · '); }
 
 const NOMES = ['João Batista da Silva','Maria Aparecida Souza','Sebastião Ramos','Cleide Nogueira',
  'Antônio Carlos Lima','Rosângela Ferreira','Marcos Vinícius Alves','Terezinha de Jesus Prado',
@@ -2255,7 +2259,7 @@ function blocoEquipe(){
       display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none">${iniciais(u.nome)}</div>`}
     <div class="t"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
-      <small>${esc(ROTULO_PAPEL[u.papel])}${u.funcao?' · '+esc(u.funcao):''} · ${esc(u.unidade)} · ${esc(u.email)}
+      <small>${esc(ROTULO_PAPEL[u.papel])}${rotuloFuncoesPessoa(u)?' · '+esc(rotuloFuncoesPessoa(u)):''} · ${esc(u.unidade)} · ${esc(u.email)}
       </small></div>
     <button class="bt g pq" onclick="event.stopPropagation();formPapel('${u.id}')">Papel e acesso</button>
   </div>`).join('');
@@ -2356,7 +2360,7 @@ function abrirEquipeMembro(uid){
       ${iniciais(u.nome)}</div>`}
     <div class="d"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
-      <div class="cod">${esc(ROTULO_PAPEL[u.papel])}${u.funcao?' · '+esc(u.funcao):''} · ${esc(u.email)}</div>
+      <div class="cod">${esc(ROTULO_PAPEL[u.papel])}${rotuloFuncoesPessoa(u)?' · '+esc(rotuloFuncoesPessoa(u)):''} · ${esc(u.email)}</div>
       <div class="ets">
         <span class="et">${participacoes} ${participacoes===1?'participação':'participações'}</span>
         <span class="et av">${faltas} ${faltas===1?'falta':'faltas'}</span>
@@ -2420,13 +2424,12 @@ function formPapel(uid){
             <select id="eq-papel" onchange="avisoPapel()">
               ${ordem.map(p=>`<option value="${p}" ${u.papel===p?'selected':''}>${ROTULO_PAPEL[p]}</option>`).join('')}
             </select></label>
-          <label class="cp"><span>Função — cargo, só rótulo <span class="op">— opcional</span></span>
-            <select id="eq-funcao">
-              <option value="">Sem função definida</option>
-              ${FUNCOES.filter(f=>f.ativa || f.nome===u.funcao)
+          <fieldset class="cp" style="border:0;padding:0;margin:0"><legend style="font-weight:650;margin-bottom:7px">Funções/cargos <span class="op">— opcional, marque quantas precisar</span></legend>
+            <div id="eq-funcoes" style="display:grid;gap:7px;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;max-height:190px;overflow:auto">
+              ${FUNCOES.filter(f=>f.ativa || funcoesDaPessoa(u).includes(f.nome))
                 .sort((a,b)=>a.nome.localeCompare(b.nome, 'pt-BR')).map(f=>
-                `<option ${u.funcao===f.nome?'selected':''}>${esc(f.nome)}</option>`).join('')}
-            </select></label>
+                `<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" name="eq-funcao" value="${esc(f.nome)}" ${funcoesDaPessoa(u).includes(f.nome)?'checked':''}> <span>${esc(f.nome)}</span></label>`).join('')}
+            </div></fieldset>
           <label class="cp"><span>Unidade</span>
             <select id="eq-unidade">
               ${['Todas'].concat(LOCAIS.filter(l=>l.ativa!==false).map(l=>l.curto)).map(n=>
@@ -2466,13 +2469,14 @@ function salvarPapel(uid){
   const nome = $('eq-nome').value.trim();
   const email = $('eq-email').value.trim();
   const papel = $('eq-papel').value;
-  const funcao = $('eq-funcao').value;
+  const funcoes = [...document.querySelectorAll('[name="eq-funcao"]:checked')].map(e=>e.value);
+  const funcao = funcoes[0] || '';
   const acesso = $('eq-acesso').value;
   const obs = $('eq-obs').value.trim();
   if(!nome){ $('eq-nome').focus(); return; }
   const u = EQUIPE.find(x => x.id === uid);
-  if(u){ Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
-  else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, papel, funcao, acesso, obs,
+  if(u){ Object.assign(u, { nome, email, papel, funcao, funcoes, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
+  else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, papel, funcao, funcoes, acesso, obs,
     unidade:$('eq-unidade').value, status:'ativo', desde: iso(new Date()),foto:fotoEquipeNova });
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',
@@ -3089,7 +3093,7 @@ function formPresencaEquipe(localId){
     </div>
     <div class="par">
       <div class="cp"><label>Quem</label><select id="pe-quem">
-        ${elegiveis.map(u => `<option value="${u.id}">${esc(u.nome)}${u.funcao?' — '+esc(u.funcao):''}</option>`).join('')}
+        ${elegiveis.map(u => `<option value="${u.id}">${esc(u.nome)}${rotuloFuncoesPessoa(u)?' — '+esc(rotuloFuncoesPessoa(u)):''}</option>`).join('')}
       </select></div>
       <div class="cp"><label>Função no turno <span class="op">— opcional</span></label>
         <select id="pe-funcao">
@@ -4229,6 +4233,6 @@ setInterval(() => {
 }, 30000);
 </script>
 <script src="supabase.min.js"></script>
-<script src="ponte-banco.js?v=23"></script>
+<script src="ponte-banco.js?v=25"></script>
 <script src="pwa.js?v=2"></script>
 </body></html>

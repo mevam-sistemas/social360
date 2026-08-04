@@ -401,12 +401,13 @@ async function carregarTudo(){
     if(error) throw new Error(oQue + ': ' + error.message);
     return data || [];
   };
-  const [orgs, unis, srvs, eqp, fns, cfgsEmail, audit, emailsLog] = await Promise.all([
+  const [orgs, unis, srvs, eqp, fns, eqFuncoes, cfgsEmail, audit, emailsLog] = await Promise.all([
     pega(sbc.from('instituicoes').select('*').limit(1), 'instituição'),
     pega(sbc.from('unidades').select('*').order('nome'), 'unidades'),
     pega(sbc.from('servicos').select('*').order('ordem'), 'serviços'),
     pega(sbc.from('equipe').select('*').order('criado_em'), 'equipe'),
     pega(sbc.from('funcoes').select('*').order('nome'), 'funções'),
+    pega(sbc.from('equipe_funcoes').select('equipe_id,funcao_id'), 'funções da equipe'),
     pega(sbc.from('config_email').select('*').eq('instituicao_id', CONEXAO.orgId), 'config de e-mail'),
     /* auditoria só existe pra quem tem pode('config_org') — mesma regra do
        config_email logo acima: a política de segurança já filtra, então
@@ -452,16 +453,23 @@ async function carregarTudo(){
   FUNCOES.length = 0;
   fns.forEach(f => FUNCOES.push({ id:f.id, nome:f.nome, ativa: f.ativa !== false }));
   const nomeFuncao = fid => fid ? ((FUNCOES.find(f => f.id === fid) || {}).nome || '') : '';
+  const funcoesPorEquipe = new Map();
+  eqFuncoes.forEach(ef => {
+    const nome=nomeFuncao(ef.funcao_id); if(!nome)return;
+    const lista=funcoesPorEquipe.get(ef.equipe_id)||[]; lista.push(nome); funcoesPorEquipe.set(ef.equipe_id,lista);
+  });
   EQUIPE.length = 0;
   const caminhosEq=[...new Set(eqp.map(u=>u.foto_url).filter(Boolean))],urlsEq=new Map();
   if(caminhosEq.length){const {data}=await sbc.storage.from('fotos-equipe').createSignedUrls(caminhosEq,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsEq.set(x.path,x.signedUrl);});}
-  eqp.forEach(u => EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, foto:urlsEq.get(u.foto_url)||null,fotoPath:u.foto_url||null,
+  eqp.forEach(u => { const funcoes=(funcoesPorEquipe.get(u.id)||[]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const funcao=funcoes[0]||nomeFuncao(u.funcao_id);
+    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, foto:urlsEq.get(u.foto_url)||null,fotoPath:u.foto_url||null,
     papel: P_DB2TELA[u.papel] || 'operador',
     unidade: u.unidade_id ? ((LOCAIS.find(l => l.id === u.unidade_id) || {}).curto || 'Todas') : 'Todas',
-    funcao: nomeFuncao(u.funcao_id),
+    funcao, funcoes:funcoes.length?funcoes:(funcao?[funcao]:[]),
     status: u.ativo ? 'ativo' : 'inativo',
     acesso: u.tem_acesso === false ? 'nao' : 'sim',
-    desde: String(u.criado_em || '').slice(0, 10), obs: u.observacao || '' }));
+    desde: String(u.criado_em || '').slice(0, 10), obs: u.observacao || '' }); });
 
   /* nomeDe() já enxerga EQUIPE aqui — precisa vir depois do forEach acima. */
   BD.auditoria.length = 0;
@@ -875,11 +883,12 @@ salvarPapel = async function(uid){
   if(!CONEXAO.ligada) return demoSalvarPapel(uid);
   const nome = $('eq-nome').value.trim(), email = $('eq-email').value.trim().toLowerCase(),
         papel = $('eq-papel').value, obs = $('eq-obs').value.trim(), unid = $('eq-unidade').value,
-        funcao = $('eq-funcao').value, acesso = $('eq-acesso').value;
+        funcoes = [...document.querySelectorAll('[name="eq-funcao"]:checked')].map(e=>e.value),
+        funcao = funcoes[0] || '', acesso = $('eq-acesso').value;
   if(!nome){ $('eq-nome').focus(); return; }
   if(!email.includes('@')){ $('eq-email').focus(); return; }
   const unidId = unid === 'Todas' ? null : ((LOCAIS.find(l => l.curto === unid) || {}).id || null);
-  const funcaoId = funcao ? ((FUNCOES.find(f => f.nome === funcao) || {}).id || null) : null;
+  const funcaoIds = funcoes.map(nome=>(FUNCOES.find(f=>f.nome===nome)||{}).id).filter(Boolean);
   const temAcesso = acesso !== 'nao';
   const u = EQUIPE.find(x => x.id === uid);
   let fotoPath=u?.fotoPath||null,fotoUrl=u?.foto||null;
@@ -887,18 +896,22 @@ salvarPapel = async function(uid){
   if(fotoEquipeNova){fotoPath=`${CONEXAO.orgId}/${idAlvo}/perfil-${Date.now()}.webp`;const up=await sbc.storage.from('fotos-equipe').upload(fotoPath,blobDeDataUrl(fotoEquipeNova),{contentType:'image/webp'});if(up.error){alert(up.error.message);return;}const sg=await sbc.storage.from('fotos-equipe').createSignedUrl(fotoPath,3600);fotoUrl=sg.data?.signedUrl||fotoEquipeNova;}
   if(u){
     const {error}=await sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
-      observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId, tem_acesso:temAcesso,
+      observacao:obs||null, unidade_id:unidId, tem_acesso:temAcesso,
       foto_url:fotoPath, ...(temAcesso?{}:{auth_id:null}) })
       .eq('id', uid).eq('instituicao_id', CONEXAO.orgId);
     if(error){console.error('[banco] equipe',error);alert('Não foi possível salvar o acesso. Tente novamente.');return;}
-    Object.assign(u, { nome, email, papel, funcao, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
+    const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:uid,p_funcoes:funcaoIds});
+    if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('Os dados foram salvos, mas não foi possível atualizar as funções.');return;}
+    Object.assign(u, { nome, email, papel, funcao, funcoes, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
   } else {
     const id = idAlvo;
     const {error}=await sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
-      papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId, funcao_id:funcaoId,
+      papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId,
       tem_acesso:temAcesso,foto_url:fotoPath });
     if(error){console.error('[banco] equipe',error);alert('Não foi possível adicionar a pessoa à equipe.');return;}
-    EQUIPE.push({ id, nome, email, papel, funcao, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
+    const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:id,p_funcoes:funcaoIds});
+    if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('A pessoa foi adicionada, mas não foi possível salvar as funções.');return;}
+    EQUIPE.push({ id, nome, email, papel, funcao, funcoes, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
   }
   let acessoMsg = temAcesso ? 'Preparando o convite…' : 'Cadastro salvo sem acesso ao sistema.';
   if(temAcesso){
