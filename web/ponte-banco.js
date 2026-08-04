@@ -220,14 +220,17 @@ async function entrarComVinculo(data){
   // — só existia pra cobrir o painel de demonstração até aqui.
   const bv = document.getElementById('boas-vindas'); if(bv) bv.remove();
   const pt = P_DB2TELA[data.papel] || 'operador';
-  SESSAO = { papel: pt, nome: data.nome, rotulo: ROTULO_PAPEL[pt] };
+  SESSAO = { papel: pt, papelReal:pt, nome: data.nome, rotulo: ROTULO_PAPEL[pt] };
   document.querySelectorAll('.rodape-l button').forEach(b => {
     // bt-entrar e bt-criar-conta eram a porta de entrada; conectado, quem
     // sai usa o botão "Trocar" de sempre (vira "Sair" abaixo) — sem os
     // dois ficarem lado a lado dizendo "Sair" duas vezes.
     if(b.id === 'bt-criar-conta' || b.id === 'bt-entrar'){ b.remove(); return; }
     const t = b.textContent.trim();
-    if(t === 'Trocar'){ b.textContent = 'Sair'; b.onclick = trocarPapel; }
+    if(t === 'Trocar'){
+      b.textContent = pt==='presidente' ? 'Perfis' : 'Sair';
+      b.onclick = trocarPapel;
+    }
   });
   identidade();
 
@@ -490,6 +493,7 @@ async function carregarTudo(){
   ]);
   permissoesPapel.forEach(p=>{
     const papel=P_DB2TELA[p.papel]||p.papel, lista=PERMISSOES[papel]; if(!lista)return;
+    if(papel==='presidente')return; // Presidência sempre reúne todos os acessos.
     const i=lista.indexOf(p.acao);
     if(p.permitido && i<0)lista.push(p.acao); else if(!p.permitido && i>=0)lista.splice(i,1);
   });
@@ -1108,12 +1112,13 @@ tirarLogo = async function(){
   if(removerErro) console.error('[banco] remover arquivo do logotipo', removerErro);
 };
 
-/* Conectado, o botão de papel vira porta de saída — papel de verdade
-   não se troca por clique, se troca em Equipe e acessos. */
+/* A Presidência pode observar e operar os fluxos dos demais papéis sem
+   alterar seu papel real. Para os demais usuários, o mesmo botão sai. */
 const demoTrocarPapel = trocarPapel;
 trocarPapel = function(){
   if(!CONEXAO.ligada) return demoTrocarPapel();
-  if(confirm('Sair da sua conta?')) sbc.auth.signOut().then(() => location.reload());
+  if(SESSAO.papelReal==='presidente') return abrirSeletorPapel();
+  sairDaConta();
 };
 
 /* ============================================================

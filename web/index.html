@@ -608,7 +608,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <div class="rodape-l">
       <div class="in" id="l-in"></div>
       <div class="quem"><b id="l-nome"></b><small id="l-papel"></small></div>
-      <button onclick="trocarPapel()">Trocar</button>
+      <button id="l-trocar-papel" onclick="trocarPapel()">Trocar</button>
     </div>
   </aside>
 
@@ -1641,8 +1641,7 @@ const PERMISSOES = {
   coordenador: ['ver_presenca','registrar_entrada','buscar_pessoa','criar_pessoa','editar_pessoa',
              'registrar_atend','ver_prontuario','ver_pendencias','doacoes',
              'ver_painel','relatorios','config_org','gerir_equipe'],
-  presidente: ['ver_presenca','buscar_pessoa','ver_prontuario','ver_tecnico','doacoes',
-             'ver_painel','relatorios','config_org','gerir_equipe']
+  presidente: Object.keys(ACOES)
 };
 /* Nota de arquitetura: hoje a presidência lê os registros de trabalho
    da assistente, por decisão da instituição. A regra mora nesta tabela
@@ -1650,7 +1649,7 @@ const PERMISSOES = {
    caso, por período ou por marcação de confidencialidade, muda-se uma
    linha aqui e o sistema inteiro obedece. */
 function pode(acao){ return (PERMISSOES[SESSAO.papel] || []).includes(acao); }
-function permissaoTravada(papel,acao){ return papel==='presidente' && ['config_org','gerir_equipe'].includes(acao); }
+function permissaoTravada(papel,acao){ return papel==='presidente'; }
 async function alternarPermissaoPapel(papel,acao){
   if(SESSAO.papel!=='presidente'){ alert('Somente a Presidência pode alterar as permissões dos perfis.'); return; }
   const ativa=PERMISSOES[papel].includes(acao), novo=!ativa;
@@ -1786,6 +1785,31 @@ function trocarPapel(){
   SESSAO = Object.assign({ papel:p }, PAPEIS[p]);
   identidade(); pilhaTelas=[];acaoVoltarTela=null;irMenu(inicioDoPapel());
 }
+function abrirSeletorPapel(){
+  if((SESSAO.papelReal||SESSAO.papel)!=='presidente') return;
+  fecharSeletorPapel();
+  const ordem=['presidente','coordenador','social','operador'];
+  const ov=document.createElement('div'); ov.id='seletor-papel-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,12,8,.42);z-index:9998;display:grid;place-items:center;padding:18px';
+  ov.onclick=e=>{if(e.target===ov)fecharSeletorPapel();};
+  ov.innerHTML=`<div role="dialog" aria-modal="true" aria-labelledby="seletor-papel-tit" style="background:var(--b0);border:1px solid var(--ln);border-radius:18px;padding:22px;width:min(390px,100%);box-shadow:0 18px 55px rgba(0,0,0,.22)">
+    <h2 id="seletor-papel-tit" style="font-size:19px;margin:0 0 5px">Escolher ponto de vista</h2>
+    <p style="font-size:13px;color:var(--tx3);margin:0 0 16px">Seu papel real continua sendo Presidência. Esta escolha muda apenas a visão e o fluxo de trabalho exibidos.</p>
+    <div style="display:grid;gap:8px">${ordem.map(p=>{const ativo=SESSAO.papel===p,cp=corPapel(p);return `<button type="button" onclick="selecionarPontoVista('${p}')" style="display:flex;align-items:center;gap:10px;text-align:left;border:1px solid ${ativo?cp.tx:'var(--ln)'};background:${ativo?cp.fun:'var(--b1)'};border-radius:11px;padding:11px 13px;cursor:pointer;font-weight:700"><span style="width:10px;height:10px;border-radius:50%;background:${cp.tx}"></span><span style="flex:1">${esc(ROTULO_PAPEL[p])}</span>${ativo?'<span style="font-size:11px">Em uso</span>':''}</button>`;}).join('')}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:17px"><button class="bt g" onclick="fecharSeletorPapel()">Cancelar</button><button class="bt g" onclick="sairDaConta()">Sair da conta</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function fecharSeletorPapel(){const e=$('seletor-papel-ov');if(e)e.remove();}
+function selecionarPontoVista(papel){
+  if((SESSAO.papelReal||SESSAO.papel)!=='presidente'||!PAPEIS[papel])return;
+  SESSAO.papel=papel; SESSAO.rotulo=ROTULO_PAPEL[papel];
+  fecharSeletorPapel(); identidade(); pilhaTelas=[]; acaoVoltarTela=null; irMenu(inicioDoPapel());
+}
+function sairDaConta(){
+  fecharSeletorPapel();
+  if(typeof sbc!=='undefined'&&confirm('Sair da sua conta?'))sbc.auth.signOut().then(()=>location.reload());
+}
 function monogramaOrg(){
   return ORG.nome.trim().split(/\s+/).filter(w => w.length > 2)
     .slice(0,2).map(w => w[0].toUpperCase()).join('') || 'IN';
@@ -1801,7 +1825,7 @@ function identidade(){
   $('l-nome').textContent = SESSAO.nome;
   const cp = corPapel(SESSAO.papel);
   $('l-papel').innerHTML = `<span class="badge-papel" style="color:${cp.tx};
-    background:${cp.fun};border-color:${cp.bd}">${esc(SESSAO.rotulo)}</span>`;
+    background:${cp.fun};border-color:${cp.bd}">${esc(SESSAO.rotulo)}</span>${SESSAO.papelReal==='presidente'&&SESSAO.papel!=='presidente'?'<span style="display:block;margin-top:3px;font-size:10px;color:var(--tx3)">visão da Presidência</span>':''}`;
   $('m-papel').textContent = SESSAO.rotulo;
   document.querySelector('.lado').style.setProperty('--papel-cor', cp.tx);
   ['l-in','m-in'].forEach(id => { const e=$(id);
@@ -2287,7 +2311,7 @@ function blocoEquipe(){
     <div class="ph"><h2>O que cada papel pode fazer</h2></div>
     <div class="cx" style="padding-bottom:6px"><div class="nota">Estas permissões já são aplicadas
       no banco de dados: além de ajustar os botões da tela, o servidor recusa qualquer operação não
-      autorizada. ${editaPermissoes?'Clique nos pontos e traços para editar cada perfil. As permissões administrativas obrigatórias da Presidência ficam travadas.':'Somente a Presidência pode editar esta matriz.'}</div></div>
+      autorizada. ${editaPermissoes?'Clique nos pontos e traços para editar cada perfil. A Presidência reúne todos os acessos e sua coluna fica travada.':'Somente a Presidência pode editar esta matriz.'}</div></div>
     <div style="overflow-x:auto"><table class="tb" style="min-width:640px">
       <thead><tr><th style="min-width:280px">Ação</th>
         ${cols.map(c=>`<th class="num">${esc(ROTULO_PAPEL[c])}</th>`).join('')}</tr></thead>
