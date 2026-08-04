@@ -5,7 +5,8 @@
 - `MAIOR`: mudança incompatível ou grande reformulação.
 - `MENOR`: funcionalidade nova compatível.
 - `CORREÇÃO`: correção sem nova funcionalidade.
-- Toda mudança publicada deve atualizar `VERSION` e `CHANGELOG.md`.
+- Toda mudança publicada deve atualizar `SOCIAL360_VERSION` em `web/version.js` e `CHANGELOG.md`.
+- Rodapé e service worker leem `web/version.js`; não repetir a versão manualmente no HTML.
 - A versão deve receber uma tag Git, por exemplo `v1.1.0`.
 
 ## Fluxo de publicação recomendado

@@ -2,6 +2,14 @@
 
 Este documento registra mudanças relevantes, evidências de validação e pendências humanas. Segredos, tokens e links temporários de autenticação nunca devem ser registrados aqui.
 
+## 2026-08-04 — versão 1.3.0
+
+### Versão única e atualização do PWA
+
+- Rodapé, cache do PWA e aviso de atualização passaram a usar `web/version.js`.
+- O número fixo `v1.2.1` foi removido do HTML.
+- Uma mudança futura de versão exige alteração em um único arquivo publicado.
+
 ## 2026-08-03 — versão 1.2.1
 
 ### Recuperação de acesso e separação do Modox
