@@ -11,8 +11,9 @@
    diferença. IDs viram UUID gerado aqui (crypto.randomUUID) para a
    tela continuar síncrona enquanto o INSERT viaja.
 
-   O que fica só na tela por enquanto (sem tabela no banco):
-   configuração de envios de e-mail e anexos de atendimento.
+   Automações de e-mail ainda não implantadas aparecem explicitamente como
+   planejadas e desabilitadas. Convites, recuperação e aniversários usam os
+   fluxos reais do servidor. Anexos de atendimento ainda não têm tabela.
    ============================================================ */
 
 const SBS_URL = 'https://lshjtlzlywipxtfwbxxe.supabase.co';
@@ -426,11 +427,8 @@ async function carregarTudo(){
     cnpj:o.cnpj||'', endereco:o.endereco||'', telefone:o.telefone||'', email:o.email||'',
     site:o.site||'', responsavel:o.responsavel||'', logo:o.logo_url||null });
   /* config_email só existe se a instituição já foi seedada (RLS: só quem tem
-     pode('config_org') enxerga a linha) — sem ela, a tela de e-mail continua
-     mostrando o mock, sem quebrar. Endereço de envio ("remetenteEnd") não
-     tem coluna própria: hoje o envio real sempre sai do único e-mail
-     verificado no Brevo, então persistir esse campo criaria a falsa
-     impressão de que ele muda o remetente de verdade — fica só de mock. */
+     pode('config_org') enxerga a linha). O endereço técnico de envio é
+     gerenciado no servidor e, por isso, não aparece como campo editável. */
   const ce = cfgsEmail[0];
   if(ce){
     Object.assign(EMAIL, { remetenteNome: ce.remetente_nome || EMAIL.remetenteNome,
@@ -438,7 +436,7 @@ async function carregarTudo(){
       horaResumo: (ce.hora_resumo || '18:00').slice(0, 5),
       soComMovimento: ce.so_com_movimento !== false });
     EMAIL.eventos.forEach(e => { const campo = MAPA_EVENTO_EMAIL[e.id];
-      if(campo) e.liga = !!ce[campo]; });
+      if(campo && e.disponivel !== false) e.liga = !!ce[campo]; });
   }
   LOCAIS.length = 0;
   unis.forEach(u => LOCAIS.push({ id:u.id, nome:u.nome, curto:u.curto, categoria:u.categoria||'',
@@ -1061,19 +1059,6 @@ salvarOrg = function(){
       responsavel:ORG.responsavel||null }).eq('id', CONEXAO.orgId), 'os dados da instituição');
 };
 
-/* "Endereço de envio" não é enviado ao banco — não tem coluna em
-   config_email, e persistir esse campo daria a entender que ele controla o
-   remetente de verdade, quando hoje o envio real sempre sai do único
-   e-mail verificado no Brevo, independente do que estiver escrito aqui. */
-const demoSalvarEmail = salvarEmail;
-salvarEmail = function(){
-  demoSalvarEmail();
-  if(CONEXAO.ligada)
-    pushDB(sbc.from('config_email').update({ remetente_nome:EMAIL.remetenteNome||null,
-      responder_para:EMAIL.responderPara||null, assinatura:EMAIL.assinatura||null,
-      hora_resumo:EMAIL.horaResumo||null }).eq('instituicao_id', CONEXAO.orgId),
-      'a configuração de envio de e-mail');
-};
 const demoVirarEvento = virarEvento;
 virarEvento = function(i){
   demoVirarEvento(i);

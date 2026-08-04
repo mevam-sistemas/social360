@@ -1050,7 +1050,6 @@ const PLANO_ALVO = (() => {
    ------------------------------------------------------------ */
 const EMAIL = {
   remetenteNome: 'Instituto SOS Vida',
-  remetenteEnd:  'nao-responda@sosvida.org.br',
   responderPara: 'contato@sosvida.org.br',
   assinatura: 'Instituto Humanitário e Educativo SOS Vida · Itajaí/SC',
   horaResumo: '18:00',
@@ -1058,27 +1057,30 @@ const EMAIL = {
   eventos: [
     { id:'resumo_diario', nome:'Resumo diário da operação',
       quando:'Todo dia no horário definido, se houve movimentação',
-      para:['coordenador','presidente'], liga:true },
+      para:['coordenador','presidente'], liga:false, disponivel:false },
     { id:'relatorio_mensal', nome:'Relatório mensal em PDF',
       quando:'No primeiro dia útil do mês seguinte',
-      para:['presidente'], liga:true },
+      para:['presidente'], liga:false, disponivel:false },
     { id:'pendencia_atrasada', nome:'Pendência da assistente atrasada',
       quando:'Manhã seguinte ao vencimento do retorno',
-      para:['social'], liga:true },
+      para:['social'], liga:false, disponivel:false },
     { id:'retorno_hoje', nome:'Retornos marcados para hoje',
       quando:'No início do expediente',
-      para:['social'], liga:true },
+      para:['social'], liga:false, disponivel:false },
     { id:'lotacao', nome:'Espaço chegando na lotação',
       quando:'Ao passar de 90% da capacidade, no máximo uma vez por hora',
-      para:['coordenador'], liga:true },
+      para:['coordenador'], liga:false, disponivel:false },
     { id:'sem_abordagem', nome:'Pessoa há muito tempo sem abordagem',
       quando:'Quando alguém passa de 45 minutos dentro sem atendimento',
-      para:['coordenador','social'], liga:false },
+      para:['coordenador','social'], liga:false, disponivel:false },
     { id:'doacao_grande', nome:'Entrada de doação registrada',
       quando:'A cada entrada lançada',
-      para:['presidente'], liga:false },
+      para:['presidente'], liga:false, disponivel:false },
     { id:'convite_equipe', nome:'Convite e redefinição de senha',
       quando:'Quando alguém é adicionado à equipe',
+      para:['todos'], liga:true, fixo:true },
+    { id:'aniversario', nome:'Felicitação de aniversário',
+      quando:'No aniversário de quem informou data de nascimento e e-mail',
       para:['todos'], liga:true, fixo:true }
   ]
 };
@@ -2605,30 +2607,19 @@ function religarEquipe(uid){
 }
 
 function blocoEmail(){
-  return `<div class="pn"><div class="ph"><h2>Quem envia</h2></div><div class="cx">
-    <div class="gr-form">
-      <label class="cp"><span>Nome do remetente</span>
-        <input id="em-nome" value="${esc(EMAIL.remetenteNome)}"></label>
-      <label class="cp"><span>Endereço de envio</span>
-        <input id="em-end" value="${esc(EMAIL.remetenteEnd)}"></label>
-      <label class="cp"><span>Responder para</span>
-        <input id="em-resp" value="${esc(EMAIL.responderPara)}"></label>
-      <label class="cp"><span>Horário do resumo diário</span>
-        <input id="em-hora" type="time" value="${esc(EMAIL.horaResumo)}"></label>
-      <label class="cp full"><span>Assinatura no rodapé dos e-mails</span>
-        <input id="em-ass" value="${esc(EMAIL.assinatura)}"></label>
-    </div>
-    <div class="linha" style="margin-top:14px"><button class="bt" onclick="salvarEmail()">Salvar</button></div>
+  return `<div class="pn"><div class="ph"><h2>Envios ativos</h2></div><div class="cx">
+    <div class="nota ok">Convites, recuperação de senha e felicitações de aniversário são enviados pelos serviços verificados da Arbor Labs.</div>
+    <div class="nota" style="margin-top:12px">O endereço técnico, a assinatura e a entregabilidade são gerenciados no servidor. A instituição não precisa configurar SMTP nem guardar senhas de e-mail.</div>
   </div></div>
 
   <div class="pn"><div class="ph"><h2>O que gera e-mail</h2><span class="sp"></span>
-    <span class="n">${EMAIL.eventos.filter(e=>e.liga).length}</span></div>
+    <span class="n">${EMAIL.eventos.filter(e=>e.liga&&e.disponivel!==false).length}</span></div>
     ${EMAIL.eventos.map((e,i) => `<div class="linha-cfg">
       <div class="t"><b>${esc(e.nome)}</b>
         <small>${esc(e.quando)} · vai para ${e.para.map(p=>ROTULO_PAPEL[p]||p).join(', ')}${
-          e.fixo?' · não desliga, é o que dá acesso a quem entra na equipe':''}</small></div>
-      <button class="chave ${e.liga?'on':''}" ${e.fixo?'disabled':''}
-        onclick="virarEvento(${i})" aria-label="${esc(e.nome)}"></button>
+          e.fixo?' · ativo e protegido':e.disponivel===false?' · planejado, ainda não envia e-mail':''}</small></div>
+      <button class="chave ${e.liga?'on':''}" ${(e.fixo||e.disponivel===false)?'disabled':''}
+        onclick="virarEvento(${i})" aria-label="${esc(e.nome)}${e.disponivel===false?' — planejado':''}"></button>
     </div>`).join('')}
   </div>
 
@@ -2719,7 +2710,7 @@ function blocoAuditoria(){
   </div>`;
 }
 function virarEvento(i){
-  const e = EMAIL.eventos[i]; if(e.fixo) return;
+  const e = EMAIL.eventos[i]; if(e.fixo || e.disponivel===false) return;
   e.liga = !e.liga; abrirInstituicao('email');
 }
 const LOGO_ARQUIVO_MAX = 5 * 1024 * 1024;
@@ -2783,17 +2774,6 @@ function salvarOrg(){
   $('org-corpo').insertAdjacentHTML('afterbegin',
     '<div class="nota ok" style="margin-bottom:14px">Dados da instituição atualizados.</div>');
 }
-function salvarEmail(){
-  EMAIL.remetenteNome = $('em-nome').value.trim();
-  EMAIL.remetenteEnd  = $('em-end').value.trim();
-  EMAIL.responderPara = $('em-resp').value.trim();
-  EMAIL.horaResumo    = $('em-hora').value;
-  EMAIL.assinatura    = $('em-ass').value.trim();
-  abrirInstituicao('email');
-  $('org-corpo').insertAdjacentHTML('afterbegin',
-    '<div class="nota ok" style="margin-bottom:14px">Configuração de envio salva.</div>');
-}
-
 /* ============================================================
    Editar cadastro e histórico de foto
    ============================================================ */
