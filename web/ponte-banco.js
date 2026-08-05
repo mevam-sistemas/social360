@@ -136,7 +136,7 @@ async function pedirRedefinirSenha(){
   if(!email.includes('@')){ msg.textContent = 'Confira o e-mail informado.'; return; }
   msg.textContent = 'Enviando link de redefinição…';
   botao.disabled = true;
-  const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+  const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: 'https://app.360social.com.br' });
   if(error){
     console.error('[banco] redefinir senha', error);
     msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.';
@@ -364,7 +364,7 @@ async function confirmarCadastroCompleto(){
       tipo_pessoa: CC_TIPO, documento: docDigitos, nome_instituicao: nomeInst,
       nome_pessoa: nomePessoa, telefone, cidade, endereco,
       termos_versao: '1.0', termos_aceitos_em: new Date().toISOString()
-    }, emailRedirectTo: location.origin }
+    }, emailRedirectTo: 'https://app.360social.com.br' }
   });
   if(signErr){
     console.error('[banco] signUp', signErr);
