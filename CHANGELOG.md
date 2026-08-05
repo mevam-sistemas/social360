@@ -2,6 +2,11 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.4 — 2026-08-05
+
+- A lista da equipe agora tem busca e paginação de 12 pessoas por vez.
+- A consulta inicial da equipe transfere somente os campos necessários, reduzindo o peso da abertura.
+
 ## 1.4.3 — 2026-08-04
 
 - Recuperação e confirmação passam a usar o endereço canônico do 360social, sem depender do domínio aberto no navegador.

@@ -2340,11 +2340,22 @@ function reativarServico(sid){
   s.ativo = true;
   abrirInstituicao('servicos');
 }
+let equipeBusca = '';
+let equipePagina = 1;
+const EQUIPE_POR_PAGINA = 12;
+function filtrarEquipe(valor){ equipeBusca=String(valor||'').trim(); equipePagina=1; abrirInstituicao('equipe'); }
+function paginaEquipe(pagina){ equipePagina=Math.max(1,Number(pagina)||1); abrirInstituicao('equipe'); }
 function blocoEquipe(){
   const ordem = ['presidente','coordenador','social','operador'];
-  const lista = EQUIPE.slice().sort((a,b) =>
+  const termo=equipeBusca.toLocaleLowerCase('pt-BR');
+  const listaCompleta = EQUIPE.filter(u=>!termo||[u.nome,u.email,ROTULO_PAPEL[u.papel],rotuloFuncoesPessoa(u)]
+    .some(v=>String(v||'').toLocaleLowerCase('pt-BR').includes(termo))).sort((a,b) =>
     (a.status===b.status ? ordem.indexOf(a.papel)-ordem.indexOf(b.papel)
                          : a.status==='ativo' ? -1 : 1));
+  const totalPaginas=Math.max(1,Math.ceil(listaCompleta.length/EQUIPE_POR_PAGINA));
+  if(equipePagina>totalPaginas)equipePagina=totalPaginas;
+  const inicio=(equipePagina-1)*EQUIPE_POR_PAGINA;
+  const lista=listaCompleta.slice(inicio,inicio+EQUIPE_POR_PAGINA);
   const linhas = lista.map(u => `<div class="linha-cfg" style="cursor:pointer" onclick="abrirEquipeMembro('${u.id}')">
     ${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:38px;height:38px;border-radius:50%;
       display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none">${iniciais(u.nome)}</div>`}
@@ -2391,7 +2402,19 @@ function blocoEquipe(){
   return `<div class="pn">
     <div class="ph"><h2>Quem tem acesso</h2><span class="sp"></span>
       <span class="n">${EQUIPE.filter(u=>u.status==='ativo').length}</span></div>
+    <div class="cx" style="padding-bottom:12px"><div class="linha">
+      <input type="search" value="${esc(equipeBusca)}" placeholder="Buscar por nome, e-mail, papel ou função"
+        aria-label="Buscar pessoa da equipe" style="flex:1;min-width:220px"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();filtrarEquipe(this.value)}">
+      <button class="bt g" onclick="filtrarEquipe(this.previousElementSibling.value)">Buscar</button>
+      ${equipeBusca?`<button class="bt g" onclick="filtrarEquipe('')">Limpar</button>`:''}
+    </div></div>
     ${linhas}
+    ${listaCompleta.length?`<div class="cx" style="border-top:1px solid var(--ln2)"><div class="linha" style="justify-content:center">
+      <button class="bt g pq" ${equipePagina<=1?'disabled':''} onclick="paginaEquipe(${equipePagina-1})">← Anterior</button>
+      <span class="nota">${inicio+1}–${Math.min(inicio+EQUIPE_POR_PAGINA,listaCompleta.length)} de ${listaCompleta.length}</span>
+      <button class="bt g pq" ${equipePagina>=totalPaginas?'disabled':''} onclick="paginaEquipe(${equipePagina+1})">Próxima →</button>
+    </div></div>`:`<div class="cx"><div class="nota">Nenhuma pessoa encontrada.</div></div>`}
     <div class="cx" style="border-top:1px solid var(--ln2)">
       <button class="bt" onclick="formPapel()">Adicionar pessoa à equipe</button>
       <div class="nota" style="margin-top:12px">Quem sai da equipe é <b>desligado, não apagado</b>.

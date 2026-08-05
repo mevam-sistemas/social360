@@ -406,7 +406,7 @@ async function carregarTudo(){
     pega(sbc.from('instituicoes').select('*').limit(1), 'instituição'),
     pega(sbc.from('unidades').select('*').order('nome'), 'unidades'),
     pega(sbc.from('servicos').select('*').order('ordem'), 'serviços'),
-    pega(sbc.from('equipe').select('*').order('criado_em'), 'equipe'),
+    pega(sbc.from('equipe').select('id,nome,email,nascimento,foto_url,papel,unidade_id,funcao_id,ativo,tem_acesso,criado_em,observacao').order('criado_em'), 'equipe'),
     pega(sbc.from('funcoes').select('*').order('nome'), 'funções'),
     pega(sbc.from('equipe_funcoes').select('equipe_id,funcao_id'), 'funções da equipe'),
     pega(sbc.from('config_email').select('*').eq('instituicao_id', CONEXAO.orgId), 'config de e-mail'),
