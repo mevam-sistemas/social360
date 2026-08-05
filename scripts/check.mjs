@@ -35,8 +35,8 @@ for (const contract of [
 ]) {
   assert(app.includes(contract) || bridge.includes(contract) || read('web/pwa.js').includes(contract), `recurso crítico ausente: ${contract}`);
 }
-assert(bridge.includes('redirectTo: location.origin'), 'recuperação não retorna ao 360social');
-assert(bridge.includes('emailRedirectTo: location.origin'), 'cadastro não retorna ao 360social');
+assert(bridge.includes("redirectTo: 'https://app.360social.com.br'"), 'recuperação não retorna ao 360social');
+assert(bridge.includes("emailRedirectTo: 'https://app.360social.com.br'"), 'cadastro não retorna ao 360social');
 assert(!app.includes('id="em-end"'), 'endereço de remetente fictício voltou a ser editável');
 assert(!app.includes('onclick="salvarEmail()"'), 'configuração de envio sem efeito voltou à interface');
 assert(app.includes('planejado, ainda não envia e-mail'), 'automações futuras não estão identificadas com transparência');

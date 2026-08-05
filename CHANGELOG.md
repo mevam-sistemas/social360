@@ -2,6 +2,11 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.3 — 2026-08-04
+
+- Recuperação e confirmação passam a usar o endereço canônico do 360social, sem depender do domínio aberto no navegador.
+- E-mails de acesso recebem assunto, linguagem e identidade próprios do produto e deixam de herdar conteúdo do Modox.
+
 ## 1.4.2 — 2026-08-04
 
 - A governança do banco compartilhado passa a apontar o CT360 como fonte canônica das 44 migrações alinhadas.
