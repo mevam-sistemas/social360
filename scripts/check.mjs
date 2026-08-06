@@ -13,6 +13,7 @@ const pkg = JSON.parse(read('package.json'));
 const securityMigration = read('supabase/migrations/20260806102000_restringir_anonimo_social.sql');
 const privilegeMigration = read('supabase/migrations/20260806100000_restaurar_privilegios_autenticados.sql');
 const supportFunction = read('supabase/functions/painel-acesso-suporte/index.ts');
+const recoveryFunction = read('supabase/functions/recuperar-senha-360social/index.ts');
 const headers = read('web/_headers');
 
 const version = sw.match(/SOCIAL360_VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1];
@@ -37,13 +38,15 @@ for (const asset of [...sw.matchAll(/['"](\/[A-Za-z0-9._/?=-]+)['"]/g)].map(m =>
 }
 
 for (const contract of [
-  'signInWithPassword', 'resetPasswordForEmail', 'PASSWORD_RECOVERY',
+  'signInWithPassword', 'recuperar-senha-360social', 'PASSWORD_RECOVERY',
   'Estoque atual', 'Carteirinha', 'Assistente Social', 'Local de armazenamento',
   'ativarNotificacoesPush', 'MediaRecorder'
 ]) {
   assert(app.includes(contract) || bridge.includes(contract) || read('web/pwa.js').includes(contract), `recurso crítico ausente: ${contract}`);
 }
-assert(bridge.includes("redirectTo: 'https://app.360social.com.br'"), 'recuperação não retorna ao 360social');
+assert(recoveryFunction.includes("const origem='https://app.360social.com.br'"), 'recuperação não retorna ao 360social');
+assert(recoveryFunction.includes('api.brevo.com/v3/smtp/email'), 'recuperação não usa o provedor Arbor Labs');
+assert(recoveryFunction.includes("email:'contato@arborlabs.com.br'"), 'recuperação não usa o domínio autenticado Arbor Labs');
 assert(bridge.includes("emailRedirectTo: 'https://app.360social.com.br'"), 'cadastro não retorna ao 360social');
 assert(!app.includes('id="em-end"'), 'endereço de remetente fictício voltou a ser editável');
 assert(!app.includes('onclick="salvarEmail()"'), 'configuração de envio sem efeito voltou à interface');

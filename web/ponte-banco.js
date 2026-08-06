@@ -151,7 +151,7 @@ async function pedirRedefinirSenha(){
   if(!email.includes('@')){ msg.textContent = 'Confira o e-mail informado.'; return; }
   msg.textContent = 'Enviando link de redefinição…';
   botao.disabled = true;
-  const { error } = await sbc.auth.resetPasswordForEmail(email, { redirectTo: 'https://app.360social.com.br' });
+  const { error } = await sbc.functions.invoke('recuperar-senha-360social', { body:{ email } });
   if(error){
     console.error('[banco] redefinir senha', error);
     msg.textContent = 'Não consegui enviar agora. Tente de novo em instantes.';

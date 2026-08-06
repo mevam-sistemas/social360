@@ -2,6 +2,14 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.18 — 2026-08-06
+
+- Unifica recuperação de senha, convites e aniversários no Brevo da Arbor Labs.
+- Preserva a identidade do 360social no remetente e no conteúdo, com assinatura
+  institucional, resposta central e rastreio pelo identificador do provedor.
+- Remove o envio direto de recuperação pelo Supabase e evita revelar se um
+  endereço está ou não cadastrado.
+
 ## 1.4.17 — 2026-08-06
 
 - carrega a logo institucional por URL temporária autenticada;

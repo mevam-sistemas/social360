@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import nodemailer from 'npm:nodemailer@6.10.1';
 
 const primeiroNome=(nome:string)=>(nome||'').trim().split(/\s+/)[0]||'Olá';
 const escapar=(s:string)=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -18,14 +17,13 @@ Deno.serve(async(req)=>{
   const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{db:{schema:'social'}});
   const {data,error}=await sb.rpc('aniversariantes_pendentes');
   if(error)return Response.json({error:error.message},{status:500});
-  const transport=nodemailer.createTransport({
-    host:Deno.env.get('SMTP_HOST'),port:Number(Deno.env.get('SMTP_PORT')||587),secure:false,
-    auth:{user:Deno.env.get('SMTP_USER'),pass:Deno.env.get('SMTP_PASS')},
-  });
   let enviados=0,falhas=0;
   for(const p of data||[]){
     try{
-      await transport.sendMail({from:`"360social" <${Deno.env.get('SMTP_FROM')}>`,to:p.email,subject:`${primeiroNome(p.nome)}, hoje celebramos a sua vida!`,html:mensagem(p)});
+      const envio=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'api-key':Deno.env.get('BREVO_API_KEY')!,'content-type':'application/json'},body:JSON.stringify({sender:{name:'360social · Arbor Labs',email:'contato@arborlabs.com.br'},replyTo:{name:'Arbor Labs',email:'contato@arborlabs.com.br'},to:[{email:p.email,name:p.nome}],subject:`${primeiroNome(p.nome)}, hoje celebramos a sua vida!`,htmlContent:mensagem(p),tags:['360social','aniversario']})});
+      if(!envio.ok)throw new Error(`Brevo ${envio.status}: ${(await envio.text()).slice(0,300)}`);
+      const comprovante=await envio.json().catch(()=>({}));
+      console.log('[360social][aniversario] aceito pelo Brevo',{pessoa_id:p.pessoa_id,message_id:comprovante?.messageId||null});
       const ano=Number(new Intl.DateTimeFormat('en',{year:'numeric',timeZone:'America/Sao_Paulo'}).format(new Date()));
       const {error:logError}=await sb.from('aniversarios_enviados').insert({pessoa_id:p.pessoa_id,ano,destinatario:p.email});
       if(logError)throw logError;
