@@ -61,6 +61,19 @@ function pushDB(q, oQue){
     .catch(e => { console.error('[banco]', oQue, e); avisoDB(oQue); });
 }
 
+function prepararModal(overlay, tituloId, fechar){
+  const painel = overlay.firstElementChild;
+  painel?.setAttribute('role','dialog');
+  painel?.setAttribute('aria-modal','true');
+  painel?.setAttribute('aria-labelledby',tituloId);
+  document.getElementById('boas-vindas')?.setAttribute('inert','');
+  overlay.addEventListener('keydown', event => { if(event.key === 'Escape') fechar(); });
+}
+function restaurarFundoModal(){
+  if(document.querySelector('#entrar-ov,#pedir-redefinir-ov,#cad-completo-ov')) return;
+  document.getElementById('boas-vindas')?.removeAttribute('inert');
+}
+
 /* ============================================================
    ENTRAR — clientes já cadastrados (logo v10, 03/08/2026). Padrão Arbor Labs: só
    e-mail + senha, sem código por e-mail. Quem esquece a senha pede um link
@@ -78,7 +91,7 @@ function abrirEntrar(){
       <b>${p.nome}</b> — R$ ${p.preco}/mês. Se você ainda não é cliente, clique em "Ainda não sou
       cliente" abaixo pra criar sua conta.</div>` : '';
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
-    <h2 style="margin:0 0 6px;font-size:19px">Já sou cliente — Entrar</h2>
+    <h2 id="entrar-titulo" style="margin:0 0 6px;font-size:19px">Já sou cliente — Entrar</h2>
     ${notaPlano}
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Use o e-mail e a senha da sua conta.</p>
     <input id="ent-email" type="email" placeholder="seu@email.com" autocomplete="email"
@@ -93,9 +106,10 @@ function abrirEntrar(){
       font-size:13px;cursor:pointer;text-decoration:underline">Ainda não sou cliente — criar conta</button>
   </div>`;
   document.body.appendChild(o);
+  prepararModal(o,'entrar-titulo',fecharEntrar);
   setTimeout(() => { const e = document.getElementById('ent-email'); if(e) e.focus(); }, 60);
 }
-function fecharEntrar(){ const o = document.getElementById('entrar-ov'); if(o) o.remove(); }
+function fecharEntrar(){ const o = document.getElementById('entrar-ov'); if(o) o.remove(); restaurarFundoModal(); }
 function abrirPedirRedefinirSenha(){
   const emailAtual = (document.getElementById('ent-email')?.value || '').trim().toLowerCase();
   fecharEntrar();
@@ -103,7 +117,7 @@ function abrirPedirRedefinirSenha(){
   o.style.cssText = 'position:fixed;inset:0;background:rgba(15,12,8,.55);z-index:9998;'
     + 'display:flex;align-items:center;justify-content:center;padding:18px';
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:380px;width:100%">
-    <h2 style="margin:0 0 6px;font-size:19px">Recuperar acesso</h2>
+    <h2 id="recuperar-titulo" style="margin:0 0 6px;font-size:19px">Recuperar acesso</h2>
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Informe o e-mail da sua conta. Você receberá um link para escolher uma nova senha.</p>
     <input id="pr-email" type="email" placeholder="seu@email.com" autocomplete="email"
       value="${esc(emailAtual)}"
@@ -114,9 +128,10 @@ function abrirPedirRedefinirSenha(){
       font-size:13px;cursor:pointer;text-decoration:underline">Voltar para entrar</button>
   </div>`;
   document.body.appendChild(o);
+  prepararModal(o,'recuperar-titulo',fecharPedirRedefinirSenha);
   setTimeout(() => { const e = document.getElementById('pr-email'); if(e) e.focus(); }, 60);
 }
-function fecharPedirRedefinirSenha(){ const o = document.getElementById('pedir-redefinir-ov'); if(o) o.remove(); }
+function fecharPedirRedefinirSenha(){ const o = document.getElementById('pedir-redefinir-ov'); if(o) o.remove(); restaurarFundoModal(); }
 async function entrarComSenha(){
   const email = (document.getElementById('ent-email').value || '').trim().toLowerCase();
   const senha = document.getElementById('ent-senha').value || '';
@@ -277,7 +292,7 @@ function abrirCadastroCompleto(){
       padding:9px 12px;margin-bottom:14px;font-size:13px;color:#8f3907">Plano escolhido:
       <b>${p.nome}</b> — R$ ${p.preco}/mês. Depois de criar sua conta, já te levamos direto pra assinar.</div>` : '';
   o.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 24px;max-width:440px;width:100%;margin:24px 0">
-    <h2 style="margin:0 0 6px;font-size:19px">Criar minha conta</h2>
+    <h2 id="cadastro-titulo" style="margin:0 0 6px;font-size:19px">Criar minha conta</h2>
     ${notaPlano}
     <p style="margin:0 0 16px;color:#6b625a;font-size:13.5px">Sete dias grátis pra testar de verdade,
       sem cartão. Depois do teste, é só assinar pra continuar — sem perder nada do que já foi feito.</p>
@@ -320,10 +335,11 @@ function abrirCadastroCompleto(){
       font-size:13px;cursor:pointer;text-decoration:underline">Já sou cliente — entrar</button>
   </div>`;
   document.body.appendChild(o);
+  prepararModal(o,'cadastro-titulo',fecharCadastroCompleto);
   CC_TIPO = 'pj';
   setTimeout(() => { const e = document.getElementById('cc-documento'); if(e) e.focus(); }, 60);
 }
-function fecharCadastroCompleto(){ const o = document.getElementById('cad-completo-ov'); if(o) o.remove(); }
+function fecharCadastroCompleto(){ const o = document.getElementById('cad-completo-ov'); if(o) o.remove(); restaurarFundoModal(); }
 function ccEscolherTipo(t){
   CC_TIPO = t;
   const bpj = document.getElementById('cc-tipo-pj'), bpf = document.getElementById('cc-tipo-pf');

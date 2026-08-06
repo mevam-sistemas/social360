@@ -52,6 +52,8 @@ assert(app.includes('for="q0"'), 'busca principal não possui rótulo semântico
 assert(app.includes('.boas-legal a{display:inline-flex;align-items:center;min-height:44px'), 'links legais não respeitam alvo de toque');
 assert(app.includes('<main class="obra"'), 'aplicação não declara sua região principal');
 assert(app.includes('function associarRotulos(root=document)'), 'campos dinâmicos não recebem associação semântica de rótulos');
+assert(bridge.includes("painel?.setAttribute('aria-modal','true')"), 'modais não declaram contexto acessível');
+assert(bridge.includes("event.key === 'Escape'"), 'modais não podem ser fechados pelo teclado');
 assert(headers.includes('X-Frame-Options: DENY'), 'aplicação ainda aceita enquadramento por terceiros');
 assert(headers.includes("frame-ancestors 'none'"), 'CSP ainda permite clickjacking');
 

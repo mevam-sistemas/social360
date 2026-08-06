@@ -2,6 +2,11 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.12 — 2026-08-06
+
+- Entrada, recuperação de senha e criação de conta passam a anunciar corretamente o contexto de diálogo.
+- O conteúdo ao fundo fica fora do teclado enquanto um diálogo estiver aberto; a tecla Escape fecha a camada e devolve a navegação.
+
 ## 1.4.11 — 2026-08-06
 
 - O painel protegido deixa de participar da navegação por teclado e da árvore assistiva enquanto a tela de entrada estiver aberta.
