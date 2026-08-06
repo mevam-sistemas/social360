@@ -54,6 +54,16 @@ jobs:
           update social.instituicoes
              set logo_url = replace(logo_url, :'source_url', :'target_url')
            where logo_url like :'source_url' || '/storage/v1/object/%';
+
+          update social.instituicoes instituicao
+             set logo_url = :'target_url' || '/storage/v1/object/public/logos-instituicoes/' || objeto.name
+            from lateral (
+              select name from storage.objects
+               where bucket_id = 'logos-instituicoes'
+               order by created_at desc nulls last
+               limit 1
+            ) objeto
+           where instituicao.logo_url is not null;
           SQL
 
       - name: Auditar referências de imagens sem expor dados pessoais
