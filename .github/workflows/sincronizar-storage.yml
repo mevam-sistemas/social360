@@ -77,8 +77,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          psql "$SOCIAL360_TARGET_DB_URL" -v ON_ERROR_STOP=1 -Atc \
+            "select foto_url from social.equipe where foto_url is not null and btrim(foto_url) <> '' and foto_url not like 'data:%' and foto_url not like 'http%' limit 3" \
+            > "${RUNNER_TEMP}/fotos-equipe.txt"
+          psql "$SOCIAL360_TARGET_DB_URL" -v ON_ERROR_STOP=1 -Atc \
+            "select logo_url from social.instituicoes where logo_url like 'http%' limit 1" \
+            > "${RUNNER_TEMP}/logo-url.txt"
           python3 - <<'PY'
-          import json, os, urllib.request
+          import json, os, pathlib, urllib.parse, urllib.request
           base = os.environ["SOCIAL360_TARGET_URL"].rstrip("/")
           key = os.environ["SOCIAL360_TARGET_SERVICE_ROLE_KEY"]
           request = urllib.request.Request(
@@ -91,5 +97,30 @@ jobs:
           missing = required - buckets
           if missing:
               raise SystemExit(f"Buckets ausentes: {', '.join(sorted(missing))}")
-          print("Buckets de logos e fotos confirmados no projeto social360.")
+
+          def is_image(payload):
+              return (payload.startswith(b"\x89PNG\r\n\x1a\n")
+                      or payload.startswith(b"\xff\xd8\xff")
+                      or payload[:4] in (b"RIFF", b"GIF8"))
+
+          runner = pathlib.Path(os.environ["RUNNER_TEMP"])
+          paths = [line for line in (runner / "fotos-equipe.txt").read_text().splitlines() if line]
+          if not paths:
+              raise SystemExit("Nenhuma referência de foto da equipe disponível para validação")
+          for path in paths:
+              url = f"{base}/storage/v1/object/authenticated/fotos-equipe/{urllib.parse.quote(path, safe='/')}"
+              req = urllib.request.Request(url, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  payload = response.read(32)
+              if not is_image(payload):
+                  raise SystemExit("Uma foto copiada não contém bytes de imagem válidos")
+
+          logo_urls = [line for line in (runner / "logo-url.txt").read_text().splitlines() if line]
+          if not logo_urls:
+              raise SystemExit("Nenhuma logo disponível para validação")
+          with urllib.request.urlopen(logo_urls[0], timeout=60) as response:
+              logo = response.read(32)
+          if not is_image(logo):
+              raise SystemExit("A logo publicada não contém bytes de imagem válidos")
+          print(f"Logo e {len(paths)} amostras de fotos abriram como imagens válidas.")
           PY

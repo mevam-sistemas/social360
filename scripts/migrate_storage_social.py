@@ -2,6 +2,7 @@
 """Copia apenas os buckets pertencentes ao 360social entre projetos Supabase."""
 
 import json
+import mimetypes
 import os
 import tempfile
 import urllib.error
@@ -60,7 +61,10 @@ def list_prefix(bucket, prefix=""):
             if not name:
                 continue
             full_name = f"{prefix}/{name}" if prefix else name
-            if entry.get("metadata") is None:
+            # Objetos antigos podem ter metadata nula. Pastas virtuais não
+            # possuem id; usar apenas metadata fazia arquivos reais serem
+            # tratados como diretórios e nenhum byte era copiado.
+            if entry.get("id") is None and entry.get("metadata") is None:
                 yield from list_prefix(bucket, full_name)
             else:
                 yield full_name, entry.get("metadata") or {}
@@ -74,7 +78,7 @@ def copy_object(bucket, name, metadata):
     download = urllib.request.Request(
         f"{SOURCE_URL}/storage/v1/object/authenticated{path}", headers=headers(SOURCE_KEY)
     )
-    content_type = metadata.get("mimetype") or "application/octet-stream"
+    content_type = metadata.get("mimetype") or mimetypes.guess_type(name)[0] or "application/octet-stream"
     with urllib.request.urlopen(download, timeout=300) as source, tempfile.SpooledTemporaryFile(
         max_size=8 * 1024 * 1024
     ) as payload:
