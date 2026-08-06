@@ -1,0 +1,70 @@
+name: Sincronizar arquivos do 360social
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sincronizar-storage-social360
+  cancel-in-progress: false
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SOCIAL360_TARGET_URL: ${{ secrets.SOCIAL360_TARGET_URL }}
+      SOCIAL360_TARGET_SERVICE_ROLE_KEY: ${{ secrets.SOCIAL360_TARGET_SERVICE_ROLE_KEY }}
+      SOCIAL360_TARGET_DB_URL: ${{ secrets.SOCIAL360_TARGET_DB_URL }}
+
+    steps:
+      - name: Obter código versionado
+        uses: actions/checkout@v4
+
+      - name: Validar configuração protegida
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SOCIAL360_TARGET_URL SOCIAL360_TARGET_SERVICE_ROLE_KEY SOCIAL360_TARGET_DB_URL)
+          for variable in "${required[@]}"; do
+            [[ -n "${!variable:-}" ]] || { echo "Segredo ausente: $variable" >&2; exit 1; }
+          done
+
+      - name: Copiar logos e fotos sem alterar dados cadastrais
+        run: python3 scripts/migrate_storage_social.py
+
+      - name: Atualizar URLs públicas que ainda apontam para o projeto anterior
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SOCIAL360_TARGET_DB_URL" -v ON_ERROR_STOP=1 \
+            --set=source_url="$SUPABASE_URL" --set=target_url="$SOCIAL360_TARGET_URL" <<'SQL'
+          update social.instituicoes
+             set logo_url = replace(logo_url, :'source_url', :'target_url')
+           where logo_url like :'source_url' || '/storage/v1/object/%';
+          SQL
+
+      - name: Confirmar objetos copiados
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          base = os.environ["SOCIAL360_TARGET_URL"].rstrip("/")
+          key = os.environ["SOCIAL360_TARGET_SERVICE_ROLE_KEY"]
+          request = urllib.request.Request(
+              f"{base}/storage/v1/bucket",
+              headers={"apikey": key, "Authorization": f"Bearer {key}"},
+          )
+          with urllib.request.urlopen(request, timeout=60) as response:
+              buckets = {item["id"] for item in json.load(response)}
+          required = {"logos-instituicoes", "fotos-equipe"}
+          missing = required - buckets
+          if missing:
+              raise SystemExit(f"Buckets ausentes: {', '.join(sorted(missing))}")
+          print("Buckets de logos e fotos confirmados no projeto social360.")
+          PY
