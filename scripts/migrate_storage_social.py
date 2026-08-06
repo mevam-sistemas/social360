@@ -83,7 +83,9 @@ def copy_object(bucket, name, metadata):
         source_response = urllib.request.urlopen(download, timeout=300)
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", "replace")[:500]
-        raise RuntimeError(f"Falha ao baixar objeto do bucket {bucket}: HTTP {error.code} — {detail}") from error
+        raise RuntimeError(
+            f"Falha ao baixar objeto {bucket}/{name}: HTTP {error.code} — {detail}"
+        ) from error
     with source_response as source, tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as payload:
         while chunk := source.read(1024 * 1024):
             payload.write(chunk)
