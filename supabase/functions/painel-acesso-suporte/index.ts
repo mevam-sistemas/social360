@@ -41,18 +41,26 @@ Deno.serve(async (req) => {
     });
 
     if (acao === "dados") {
-      const [{ data: instituicoes, error: ei }, { data: planos, error: ep }, { data: pessoas, error: epe }] = await Promise.all([
+      const [{ data: instituicoes, error: ei }, { data: planos, error: ep }, { data: pessoas, error: epe }, { data: equipe, error: ee }] = await Promise.all([
         admin.schema("social").from("instituicoes").select("id,nome,email,telefone,plano,trial_expira_em,limite_pessoas"),
         admin.schema("social").from("plano_instituicao").select("instituicao_id,status,ativa_ate"),
         admin.schema("social").from("pessoas").select("instituicao_id,arquivada"),
+        admin.schema("social").from("equipe").select("instituicao_id,email,papel,ativo,tem_acesso,criado_em"),
       ]);
-      if (ei || ep || epe) throw ei || ep || epe;
+      if (ei || ep || epe || ee) throw ei || ep || epe || ee;
       const agora = Date.now();
       const contagem = new Map<string, number>();
       for (const pessoa of pessoas || []) if (!pessoa.arquivada) {
         contagem.set(pessoa.instituicao_id, (contagem.get(pessoa.instituicao_id) || 0) + 1);
       }
       const porInstituicao = new Map((planos || []).map((p) => [p.instituicao_id, p]));
+      const prioridadePapel: Record<string, number> = { presidente: 0, coordenador: 1, assistente: 2, operador: 3 };
+      const acessoPorInstituicao = new Map<string, string>();
+      for (const membro of (equipe || []).filter((e) => e.ativo && e.tem_acesso).sort((a, b) =>
+        (prioridadePapel[a.papel] ?? 9) - (prioridadePapel[b.papel] ?? 9)
+        || String(a.criado_em).localeCompare(String(b.criado_em)))) {
+        if (!acessoPorInstituicao.has(membro.instituicao_id)) acessoPorInstituicao.set(membro.instituicao_id, membro.email);
+      }
       const lista = (instituicoes || []).map((i) => {
         const p = porInstituicao.get(i.id);
         const trial = i.trial_expira_em ? new Date(i.trial_expira_em).getTime() : 0;
@@ -62,7 +70,7 @@ Deno.serve(async (req) => {
         const ativos = contagem.get(i.id) || 0;
         return {
           nome: i.nome,
-          email: i.email,
+          email: acessoPorInstituicao.get(i.id) || i.email,
           telefone: i.telefone,
           status,
           uso_percentual: i.limite_pessoas ? Math.round((ativos / i.limite_pessoas) * 1000) / 10 : null,
@@ -88,8 +96,13 @@ Deno.serve(async (req) => {
         options: { redirectTo: "https://app.360social.com.br" },
       });
       if (error) throw error;
+      if (!data.properties?.action_link) throw new Error("link não gerado");
+      const link = new URL(data.properties.action_link);
+      // Defesa contra configuração antiga ou cache: o link emitido pelo botão
+      // do 360social nunca pode herdar o Site URL de outro produto.
+      link.searchParams.set("redirect_to", "https://app.360social.com.br/");
       console.info(JSON.stringify({ evento: "acesso_suporte_gerado", produto: "360social", por: SUPORTE_EMAIL }));
-      return resposta({ link: data.properties?.action_link || null });
+      return resposta({ link: link.toString(), produto: "360social", destino: "https://app.360social.com.br/" });
     }
 
     return resposta({ error: "ação inválida" }, 400);
