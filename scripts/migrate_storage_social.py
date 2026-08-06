@@ -76,7 +76,7 @@ def list_prefix(bucket, prefix=""):
 def copy_object(bucket, name, metadata):
     path = f"/{urllib.parse.quote(bucket, safe='')}/{urllib.parse.quote(name, safe='/')}"
     download = urllib.request.Request(
-        f"{SOURCE_URL}/storage/v1/object/authenticated{path}", headers=headers(SOURCE_KEY)
+        f"{SOURCE_URL}/storage/v1/object{path}", headers=headers(SOURCE_KEY)
     )
     content_type = metadata.get("mimetype") or mimetypes.guess_type(name)[0] or "application/octet-stream"
     with urllib.request.urlopen(download, timeout=300) as source, tempfile.SpooledTemporaryFile(
