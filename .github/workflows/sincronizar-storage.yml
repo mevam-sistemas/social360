@@ -48,6 +48,30 @@ jobs:
            where logo_url like :'source_url' || '/storage/v1/object/%';
           SQL
 
+      - name: Auditar referências de imagens sem expor dados pessoais
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SOCIAL360_TARGET_DB_URL" -v ON_ERROR_STOP=1 -At <<'SQL'
+          select 'equipe|' || case
+            when foto_url is null or btrim(foto_url) = '' then 'vazia'
+            when foto_url like 'data:%' then 'data-url'
+            when foto_url like 'http%' then 'url-' || split_part(split_part(foto_url, '://', 2), '/', 1)
+            else 'caminho-storage'
+          end || '|' || count(*)
+          from social.equipe
+          group by 1;
+
+          select 'logo|' || case
+            when logo_url is null or btrim(logo_url) = '' then 'vazia'
+            when logo_url like 'data:%' then 'data-url'
+            when logo_url like 'http%' then 'url-' || split_part(split_part(logo_url, '://', 2), '/', 1)
+            else 'caminho-storage'
+          end || '|' || count(*)
+          from social.instituicoes
+          group by 1;
+          SQL
+
       - name: Confirmar objetos copiados
         shell: bash
         run: |
