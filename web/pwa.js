@@ -1,7 +1,7 @@
 (function(){
   if(!('serviceWorker' in navigator)) return;
   let recarregando = false, jaControlada = !!navigator.serviceWorker.controller;
-  const VAPID_PUBLICA='BDUSJw-XU8Y-bKO0RDKT2n2i_teEve8iu26xFiXs4GF4JGQ33MpRWgE7M4ee090Atrwo1m8zPQqY7c1HsfKUeUQ';
+  const VAPID_PUBLICA='BKE9NnyJ_s5SWjjdW_0S8DWg7l2iB16_QBm4s_L_jV7aSkUeaMZnNZMJNgyWqYjDAS1K3gUWpKyYAqjuW2v-Ma8';
   const bytesBase64Url=s=>{const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...b].map(c=>c.charCodeAt(0)));};
   window.ativarNotificacoesPush=async function(){
     if(!('PushManager'in window))throw new Error('Este aparelho não oferece notificações push.');

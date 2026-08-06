@@ -16,8 +16,8 @@
    fluxos reais do servidor. Anexos de atendimento ainda não têm tabela.
    ============================================================ */
 
-const SBS_URL = 'https://lshjtlzlywipxtfwbxxe.supabase.co';
-const SBS_KEY = 'sb_publishable_7-sR87eV6b4I8nx-k6Hriw_DEVprjfz'; /* chave pública */
+const SBS_URL = 'https://qimjttthnvmyjeqqopbf.supabase.co';
+const SBS_KEY = 'sb_publishable_xxI2uLcflZn7yhSysNhO7w_JkXgGTt1'; /* chave pública */
 const TIPO_LINK_AUTH = new URLSearchParams(location.hash.replace(/^#/, '')).get('type');
 const sbc = supabase.createClient(SBS_URL, SBS_KEY, { db: { schema: 'social' } });
 
@@ -353,11 +353,8 @@ async function confirmarCadastroCompleto(){
   if(!document.getElementById('cc-legal').checked){ msg.textContent = 'Para criar a conta, leia e aceite os Termos de Uso e o Aviso de Privacidade.'; return; }
 
   msg.textContent = 'Criando sua conta…';
-  // emailRedirectTo é essencial aqui: o projeto Supabase é compartilhado
-  // entre 360social e MODOX (mesmo backend de autenticação), então sem
-  // isso o link de confirmação usa a "Site URL" padrão do projeto — que é
-  // do MODOX — e a pessoa confirma o e-mail mas cai dentro do app errado.
-  // Mesma lógica já usada em pedirRedefinirSenha() logo acima.
+  // Mantemos o destino explícito como defesa adicional: o 360social possui
+  // banco e autenticação próprios e nunca deve encaminhar para outro produto.
   const { data: signData, error: signErr } = await sbc.auth.signUp({
     email, password: senha,
     options: { data: {

@@ -2,6 +2,13 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.6 — 2026-08-06
+
+- Produção passa a usar um projeto Supabase exclusivo do 360social, sem compartilhar autenticação, dados ou arquivos com o Modox.
+- Autenticação fica restrita ao domínio oficial, exige ao menos 10 caracteres e verifica senhas conhecidas em vazamentos.
+- Convites e notificações push são publicados no novo ambiente, com origem restrita e autorização explícita do autor da orientação.
+- Chaves de push são renovadas para o ambiente dedicado; dispositivos já inscritos podem ativar novamente as notificações pelo aplicativo.
+
 ## 1.4.5 — 2026-08-06
 
 - Navegação lateral, ações compactas, rodapé e aviso de atualização passam a respeitar alvos de toque de 44 px.
