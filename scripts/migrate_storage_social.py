@@ -126,7 +126,7 @@ def main():
             target_buckets.add(bucket)
         else:
             json_request(TARGET_URL, TARGET_KEY, "PUT", f"/storage/v1/bucket/{bucket}", definition)
-        objects = manifest.get(bucket) if manifest_path else (list_prefix(bucket) if info else [])
+        objects = manifest.get(bucket, []) if manifest_path else (list_prefix(bucket) if info else [])
         for name, metadata in objects:
             copy_object(bucket, name, metadata)
             copied += 1
