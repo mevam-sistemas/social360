@@ -16,3 +16,15 @@
   perder o estado da tela.
 - Homologar no desktop, PWA Android e iOS, incluindo números brasileiros com e sem o código do país.
 
+## Sincronização segura do e-mail de acesso
+
+**Estado:** planejado — inconsistência confirmada em homologação.
+
+- Ao alterar o e-mail de uma pessoa com acesso, sincronizar a ficha `social.equipe` e a identidade
+  correspondente em `auth.users`; nunca exibir sucesso quando apenas um dos registros foi alterado.
+- Exigir permissão administrativa, confirmação explícita do novo endereço e auditoria com autor,
+  data/hora, e-mail anterior e resultado, sem armazenar tokens de confirmação.
+- Enquanto a confirmação estiver pendente, o e-mail anterior continua sendo o endereço de login e de
+  recuperação; o novo endereço deve aparecer como pendente, não como efetivado.
+- Se uma etapa falhar, manter o estado anterior ou sinalizar claramente a reconciliação necessária,
+  evitando duas identidades contraditórias.

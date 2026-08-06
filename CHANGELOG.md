@@ -2,6 +2,15 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.20 — 2026-08-06
+
+- Faz a recuperação depender da existência da conta no Supabase Auth, sem exigir
+  uma linha ativa simultânea na tabela de equipe.
+- Corrige a recuperação de contratantes, contas de suporte e cadastros iniciais,
+  sem alterar as permissões institucionais protegidas pelo servidor e pelo RLS.
+- Quando a ficha da equipe e o Auth ainda possuem e-mails divergentes, resolve o
+  vínculo pelo `auth_id` e envia somente ao endereço que continua protegido pelo Auth.
+
 ## 1.4.19 — 2026-08-06
 
 - Autoriza o cabeçalho de identificação enviado pelo cliente Supabase no CORS das
