@@ -2,6 +2,14 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.21 — 2026-08-06
+
+- Impede que um e-mail já ativo seja cadastrado novamente na mesma equipe e
+  orienta o operador a editar a ficha existente.
+- Reativa e atualiza automaticamente uma ficha anterior quando o mesmo e-mail
+  pertence a um membro desligado, preservando seu histórico institucional.
+- Substitui a falha genérica de chave duplicada por mensagens operacionais claras.
+
 ## 1.4.20 — 2026-08-06
 
 - Faz a recuperação depender da existência da conta no Supabase Auth, sem exigir

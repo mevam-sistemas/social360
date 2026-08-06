@@ -914,25 +914,44 @@ salvarPapel = async function(uid){
   const unidId = unid === 'Todas' ? null : ((LOCAIS.find(l => l.curto === unid) || {}).id || null);
   const funcaoIds = funcoes.map(nome=>(FUNCOES.find(f=>f.nome===nome)||{}).id).filter(Boolean);
   const temAcesso = acesso !== 'nao';
-  const u = EQUIPE.find(x => x.id === uid);
+  let u = EQUIPE.find(x => x.id === uid);
+  let reativando = false;
+  if(!u && !uid){
+    const existente = EQUIPE.find(x => String(x.email||'').trim().toLowerCase() === email);
+    if(existente){
+      if(existente.status === 'ativo'){
+        alert('Este e-mail já pertence a uma pessoa ativa da equipe. Abra o cadastro existente para alterar seus dados ou funções.');
+        return;
+      }
+      u = existente;
+      reativando = true;
+    }
+  }
   let fotoPath=u?.fotoPath||null,fotoUrl=u?.foto||null;
-  const idAlvo=uid||crypto.randomUUID();
+  const idAlvo=u?.id||uid||crypto.randomUUID();
   if(fotoEquipeNova){fotoPath=`${CONEXAO.orgId}/${idAlvo}/perfil-${Date.now()}.webp`;const up=await sbc.storage.from('fotos-equipe').upload(fotoPath,blobDeDataUrl(fotoEquipeNova),{contentType:'image/webp'});if(up.error){alert(up.error.message);return;}const sg=await sbc.storage.from('fotos-equipe').createSignedUrl(fotoPath,3600);fotoUrl=sg.data?.signedUrl||fotoEquipeNova;}
   if(u){
     const {error}=await sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
       observacao:obs||null, unidade_id:unidId, tem_acesso:temAcesso, nascimento,
-      foto_url:fotoPath, ...(temAcesso?{}:{auth_id:null}) })
-      .eq('id', uid).eq('instituicao_id', CONEXAO.orgId);
+      foto_url:fotoPath, ativo:true, desligado_em:null, ...(temAcesso?{}:{auth_id:null}) })
+      .eq('id', idAlvo).eq('instituicao_id', CONEXAO.orgId);
     if(error){console.error('[banco] equipe',error);alert('Não foi possível salvar o acesso. Tente novamente.');return;}
-    const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:uid,p_funcoes:funcaoIds});
+    const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:idAlvo,p_funcoes:funcaoIds});
     if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('Os dados foram salvos, mas não foi possível atualizar as funções.');return;}
-    Object.assign(u, { nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid,foto:fotoUrl,fotoPath });
+    Object.assign(u, { nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid,
+      foto:fotoUrl,fotoPath,status:'ativo' });
   } else {
     const id = idAlvo;
     const {error}=await sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
       papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId, nascimento,
       tem_acesso:temAcesso,foto_url:fotoPath });
-    if(error){console.error('[banco] equipe',error);alert('Não foi possível adicionar a pessoa à equipe.');return;}
+    if(error){
+      console.error('[banco] equipe',error);
+      alert(error.code==='23505'
+        ? 'Este e-mail já está cadastrado na equipe. Atualize a página e abra o cadastro existente.'
+        : 'Não foi possível adicionar a pessoa à equipe. Tente novamente; se persistir, informe o horário ao suporte.');
+      return;
+    }
     const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:id,p_funcoes:funcaoIds});
     if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('A pessoa foi adicionada, mas não foi possível salvar as funções.');return;}
     EQUIPE.push({ id, nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
@@ -947,6 +966,7 @@ salvarPapel = async function(uid){
       ? `Convite enviado para ${email}. A pessoa deve abrir o link e escolher a senha.`
       : `A conta ${email} foi vinculada a esta ficha.`;
   }
+  if(reativando) acessoMsg = `Cadastro anterior reativado. ${acessoMsg}`;
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',
     `<div class="nota ok" style="margin-bottom:14px">${esc(nome)} — ${ROTULO_PAPEL[papel]}.
