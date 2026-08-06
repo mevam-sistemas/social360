@@ -36,7 +36,14 @@ jobs:
           done
 
       - name: Copiar logos e fotos sem alterar dados cadastrais
-        run: python3 scripts/migrate_storage_social.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="${RUNNER_TEMP}/objetos-sociais.tsv"
+          psql "$SOURCE_DB_URL" -v ON_ERROR_STOP=1 -At -F $'\t' -c \
+            "select bucket_id,name,coalesce(metadata->>'mimetype','') from storage.objects where bucket_id in ('logos-instituicoes','documentos-pessoas','diretivas','diretivas-audios','fotos-equipe') order by bucket_id,name" \
+            > "$manifest"
+          SOCIAL360_OBJECT_MANIFEST="$manifest" python3 scripts/migrate_storage_social.py
 
       - name: Atualizar URLs públicas que ainda apontam para o projeto anterior
         shell: bash

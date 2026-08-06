@@ -103,6 +103,13 @@ def main():
         item["id"] for item in json_request(TARGET_URL, TARGET_KEY, "GET", "/storage/v1/bucket")
     }
     copied = 0
+    manifest_path = os.environ.get("SOCIAL360_OBJECT_MANIFEST")
+    manifest = {}
+    if manifest_path:
+        with open(manifest_path, encoding="utf-8") as source:
+            for line in source:
+                bucket, name, mimetype = line.rstrip("\n").split("\t", 2)
+                manifest.setdefault(bucket, []).append((name, {"mimetype": mimetype} if mimetype else {}))
     for bucket in sorted(SOCIAL_BUCKETS):
         info = source_buckets.get(bucket)
         public, size_limit, mime_types = BUCKET_DEFAULTS[bucket]
@@ -119,10 +126,10 @@ def main():
             target_buckets.add(bucket)
         else:
             json_request(TARGET_URL, TARGET_KEY, "PUT", f"/storage/v1/bucket/{bucket}", definition)
-        if info:
-            for name, metadata in list_prefix(bucket):
-                copy_object(bucket, name, metadata)
-                copied += 1
+        objects = manifest.get(bucket) if manifest_path else (list_prefix(bucket) if info else [])
+        for name, metadata in objects:
+            copy_object(bucket, name, metadata)
+            copied += 1
 
     # O bucket compartilhado `fotos` continha somente inscrições do Modox.
     # No projeto novo ele nasce vazio e privado para futuras fotos do 360social.
