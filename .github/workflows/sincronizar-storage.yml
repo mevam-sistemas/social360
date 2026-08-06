@@ -39,12 +39,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source_db_ref="$(printf '%s' "$SOURCE_DB_URL" | sed -E 's#.*db\.([^.]+)\.supabase\.co.*#\1#')"
-          source_api_ref="$(printf '%s' "$SUPABASE_URL" | sed -E 's#https://([^.]+)\.supabase\.co.*#\1#')"
-          [[ "$source_db_ref" == "$source_api_ref" ]] || {
-            echo "A URL da API de origem não pertence ao mesmo projeto do banco de origem." >&2
-            exit 1
-          }
           manifest="${RUNNER_TEMP}/objetos-sociais.tsv"
           psql "$SOURCE_DB_URL" -v ON_ERROR_STOP=1 -At -F $'\t' -c \
             "select bucket_id,name,coalesce(metadata->>'mimetype','') from storage.objects where bucket_id in ('logos-instituicoes','fotos-equipe') order by bucket_id,name" \
