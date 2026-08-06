@@ -68,7 +68,7 @@ a{color:inherit}
 .lado nav{padding:6px 10px;flex:1;overflow-y:auto}
 .lado nav button{width:100%;display:flex;align-items:center;gap:9px;background:none;border:0;
   cursor:pointer;text-align:left;color:var(--tx2);font-size:14.5px;font-weight:600;
-  padding:10px 12px;border-radius:var(--r);transition:.12s;line-height:1.3;margin-bottom:2px}
+  padding:10px 12px;border-radius:var(--r);transition:.12s;line-height:1.3;margin-bottom:2px;min-height:44px}
 .lado nav button:hover{background:var(--b2);color:var(--tx)}
 .lado nav button.sel{background:var(--lar-fun);color:var(--lar-esc);font-weight:750;
   box-shadow:inset 2px 0 0 var(--lar)}
@@ -84,7 +84,7 @@ a{color:inherit}
 .badge-papel{display:inline-block;font-size:10.5px;font-weight:750;padding:2px 7px;
   border-radius:20px;border:1px solid;letter-spacing:.01em}
 .lado .rodape-l button{background:var(--b2);border:1px solid var(--ln);color:var(--tx3);
-  border-radius:8px;padding:6px 9px;font-size:11.5px;font-weight:700;cursor:pointer}
+  border-radius:8px;padding:6px 9px;font-size:11.5px;font-weight:700;cursor:pointer;min-width:44px;min-height:44px}
 .lado .rodape-l button:hover{background:var(--b3);color:var(--tx)}
 @media(max-width:920px){ .lado{display:none} }
 
@@ -108,7 +108,7 @@ a{color:inherit}
   padding-bottom:env(safe-area-inset-bottom)}
 .barra-m button{flex:1;background:none;border:0;cursor:pointer;padding:9px 2px 9px;
   display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--tx4);
-  font-size:10.5px;font-weight:700;position:relative}
+  font-size:10.5px;font-weight:700;position:relative;min-height:52px}
 .barra-m button.sel{color:var(--lar-esc)}
 .barra-m button .pt{width:20px;height:3px;border-radius:3px;background:transparent}
 .barra-m button.sel .pt{background:var(--lar)}
@@ -145,7 +145,7 @@ a{color:inherit}
 .bt.ok{background:var(--ok)} .bt.ok:hover{background:#0C6647}
 .bt.pg{background:var(--pg-fun);color:var(--pg);border-color:var(--pg-bd)}
 .bt.gr{font-size:15.5px;padding:14px 24px;min-height:50px}
-.bt.pq{font-size:13px;padding:7px 12px;min-height:34px}
+.bt.pq{font-size:13px;padding:8px 12px;min-height:44px}
 .bt.larga{width:100%}
 .linha{display:flex;gap:9px;flex-wrap:wrap}
 .bt-icone{width:44px;height:44px;border-radius:50%;padding:0;display:inline-grid;place-items:center;flex:none}
@@ -220,14 +220,14 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid 
 .marca-org .t small{display:block;font-size:11.5px;color:var(--tx4);margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lado .config-org{margin-top:12px;width:100%;background:var(--b2);border:1px solid var(--ln);
-  color:var(--tx3);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
+  color:var(--tx3);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;min-height:44px}
 .lado .config-org:hover{background:var(--b3);color:var(--tx)}
 .selo-nosso{padding:11px 13px;border-top:1px solid var(--ln);display:flex;align-items:center;gap:8px;
   font-size:11.5px;color:var(--tx4);line-height:1.35}
 .selo-nosso svg{width:15px;height:15px;flex:none;color:var(--lar)}
 .selo-nosso b{color:var(--tx3);font-weight:750}
 .selo-nosso b i{font-style:normal;font-weight:500}
-.selo-nosso a{color:var(--tx3);font-size:10.5px}
+.selo-nosso a{color:var(--tx3);font-size:10.5px;display:inline-flex;align-items:center;min-height:44px}
 
 /* ---------- histórico de foto de perfil ---------- */
 .fotos{display:flex;gap:12px;overflow-x:auto;padding:16px 20px 18px;scroll-snap-type:x proximity}
@@ -276,7 +276,7 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid 
 .fx .cab b{font-size:14px;font-weight:780;letter-spacing:-.015em}
 .fx .cab .sp{flex:1}
 .fx .cab button{background:none;border:0;color:var(--lar-esc);font-size:13px;font-weight:750;
-  cursor:pointer;padding:4px 8px;border-radius:8px}
+  cursor:pointer;padding:8px 9px;border-radius:8px;min-height:44px}
 .fx .cab button:hover{background:var(--lar-fun)}
 .fx .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(206px,1fr));gap:1px;
   background:var(--ln2)}

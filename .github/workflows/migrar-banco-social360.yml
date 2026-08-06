@@ -1,0 +1,103 @@
+name: Migrar banco para projeto exclusivo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migracao-social360
+  cancel-in-progress: false
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SOURCE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_DB_URL: ${{ secrets.SOCIAL360_TARGET_DB_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SOCIAL360_TARGET_URL: ${{ secrets.SOCIAL360_TARGET_URL }}
+      SOCIAL360_TARGET_SERVICE_ROLE_KEY: ${{ secrets.SOCIAL360_TARGET_SERVICE_ROLE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar PostgreSQL 17
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-17
+
+      - name: Validar configuração protegida
+        run: |
+          set -euo pipefail
+          required=(SOURCE_DB_URL TARGET_DB_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SOCIAL360_TARGET_URL SOCIAL360_TARGET_SERVICE_ROLE_KEY)
+          for variable in "${required[@]}"; do
+            [[ -n "${!variable:-}" ]] || { echo "Segredo ausente: $variable" >&2; exit 1; }
+          done
+
+      - name: Copiar schema e dados sociais
+        run: |
+          set -euo pipefail
+          dir="${RUNNER_TEMP}/social360-migration"
+          mkdir -p "$dir"
+          /usr/lib/postgresql/17/bin/pg_dump "$SOURCE_DB_URL" --format=custom \
+            --schema=social --no-owner --no-privileges --file="$dir/social.dump"
+          /usr/lib/postgresql/17/bin/pg_dump "$SOURCE_DB_URL" --data-only --column-inserts \
+            --table=auth.users --table=auth.identities --no-owner --no-privileges \
+            --file="$dir/auth.sql"
+          /usr/lib/postgresql/17/bin/pg_restore --dbname="$TARGET_DB_URL" --no-owner --no-privileges \
+            --exit-on-error --section=pre-data "$dir/social.dump"
+          psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 --file="$dir/auth.sql"
+          /usr/lib/postgresql/17/bin/pg_restore --dbname="$TARGET_DB_URL" --no-owner --no-privileges \
+            --exit-on-error --section=data "$dir/social.dump"
+          /usr/lib/postgresql/17/bin/pg_restore --dbname="$TARGET_DB_URL" --no-owner --no-privileges \
+            --exit-on-error --section=post-data "$dir/social.dump"
+          psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          delete from auth.users u
+           where not exists (select 1 from social.equipe e where e.auth_id = u.id);
+          SQL
+
+      - name: Copiar políticas e buckets do Storage
+        run: |
+          set -euo pipefail
+          policies="${RUNNER_TEMP}/social360-storage-policies.sql"
+          psql "$SOURCE_DB_URL" -At -v ON_ERROR_STOP=1 -c "
+            select format(
+              'drop policy if exists %I on storage.objects; create policy %I on storage.objects as %s for %s to %s%s%s;',
+              policyname, policyname, permissive, cmd,
+              (select string_agg(quote_ident(role_name), ', ') from unnest(roles) role_name),
+              case when qual is null then '' else ' using (' || qual || ')' end,
+              case when with_check is null then '' else ' with check (' || with_check || ')' end
+            )
+            from pg_policies
+            where schemaname='storage' and tablename='objects'
+              and (coalesce(qual,'') like '%social.%' or coalesce(with_check,'') like '%social.%')
+            order by policyname" > "$policies"
+          psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 --file="$policies"
+          python3 scripts/migrate_storage_social.py
+
+      - name: Aplicar endurecimento e validar contagens
+        run: |
+          set -euo pipefail
+          psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 --file=supabase/migrations/20260806102000_restringir_anonimo_social.sql
+          source_counts="$(psql "$SOURCE_DB_URL" -At -F '|' -c \
+            "select (select count(*) from social.instituicoes),(select count(*) from social.equipe),(select count(*) from social.pessoas)")"
+          target_counts="$(psql "$TARGET_DB_URL" -At -F '|' -c \
+            "select (select count(*) from social.instituicoes),(select count(*) from social.equipe),(select count(*) from social.pessoas)")"
+          [[ "$source_counts" == "$target_counts" ]] || { echo "Contagens divergentes" >&2; exit 1; }
+          anon_exec="$(psql "$TARGET_DB_URL" -At -c \
+            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='social' and has_function_privilege('anon',p.oid,'EXECUTE')")"
+          [[ "$anon_exec" == "0" ]] || { echo "RPC social ainda exposta a anon" >&2; exit 1; }
+          echo "### Migração validada" >> "$GITHUB_STEP_SUMMARY"
+          echo "Instituições, equipe e pessoas conferem; nenhuma RPC social está disponível ao papel anônimo." >> "$GITHUB_STEP_SUMMARY"

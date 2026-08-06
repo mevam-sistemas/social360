@@ -10,6 +10,7 @@ const bridge = read('web/ponte-banco.js');
 const manifest = JSON.parse(read('web/manifest.json'));
 const changelog = read('CHANGELOG.md');
 const pkg = JSON.parse(read('package.json'));
+const securityMigration = read('supabase/migrations/20260806102000_restringir_anonimo_social.sql');
 
 const version = sw.match(/SOCIAL360_VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1];
 assert(version, 'SOCIAL360_VERSION ausente do service worker');
@@ -40,6 +41,9 @@ assert(bridge.includes("emailRedirectTo: 'https://app.360social.com.br'"), 'cada
 assert(!app.includes('id="em-end"'), 'endereço de remetente fictício voltou a ser editável');
 assert(!app.includes('onclick="salvarEmail()"'), 'configuração de envio sem efeito voltou à interface');
 assert(app.includes('planejado, ainda não envia e-mail'), 'automações futuras não estão identificadas com transparência');
+assert(securityMigration.includes('revoke all on function %s from public, anon'), 'RPCs sociais não revogam acesso anônimo');
+assert(securityMigration.includes('revoke usage on schema social from anon'), 'schema social ainda pode ser usado por anon');
+assert(app.includes('.bt.pq{font-size:13px;padding:8px 12px;min-height:44px}'), 'ações compactas não respeitam alvo de toque');
 
 const walk = dir => readdirSync(dir).flatMap(name => {
   const path = join(dir, name);

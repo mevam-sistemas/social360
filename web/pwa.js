@@ -24,7 +24,7 @@
         +'align-items:center;gap:12px;font:600 13.5px/1.4 system-ui,-apple-system,sans-serif';
       el.innerHTML = '<span style="flex:1"><b style="display:block">Nova versão disponível</b>'
         +'<span style="color:#6E737D;font-weight:500">Atualize para receber as melhorias do 360social.</span></span>'
-        +'<button type="button" style="border:0;border-radius:10px;background:#F26A1B;color:#fff;padding:10px 13px;'
+        +'<button type="button" style="border:0;border-radius:10px;background:#F26A1B;color:#fff;padding:10px 13px;min-height:44px;'
         +'font:750 13px system-ui;white-space:nowrap;cursor:pointer">Atualizar agora</button>';
       document.body.appendChild(el);
     }

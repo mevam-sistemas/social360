@@ -2,7 +2,7 @@
    Dados do Supabase, fotos, documentos e prontuários nunca são interceptados. */
 // Fonte canônica da versão. O rodapé lê este mesmo arquivo, evitando que
 // interface e cache do PWA mostrem números diferentes.
-const SOCIAL360_VERSION = '1.4.4';
+const SOCIAL360_VERSION = '1.4.5';
 const VERSAO = '360social-shell-v' + SOCIAL360_VERSION;
 const SHELL = [
   '/', '/manifest.json', '/supabase.min.js', '/qrcode.js?v=1', '/ponte-banco.js?v=26', '/pwa.js?v=2',

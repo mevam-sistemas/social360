@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.5 — 2026-08-06
+
+- Navegação lateral, ações compactas, rodapé e aviso de atualização passam a respeitar alvos de toque de 44 px.
+- Auditoria de segurança identifica e inicia a retirada do acoplamento histórico com o banco do Modox.
+- Backup completo e cifrado executado antes da separação dos projetos Supabase.
+
 ## 1.4.4 — 2026-08-05
 
 - A lista da equipe agora tem busca e paginação de 12 pessoas por vez.
