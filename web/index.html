@@ -2374,6 +2374,13 @@ let equipePagina = 1;
 const EQUIPE_POR_PAGINA = 12;
 function filtrarEquipe(valor){ equipeBusca=String(valor||'').trim(); equipePagina=1; abrirInstituicao('equipe'); }
 function paginaEquipe(pagina){ equipePagina=Math.max(1,Number(pagina)||1); abrirInstituicao('equipe'); }
+function avatarEquipe(u,tamanho=38){
+  const nome=u?.nome||'Equipe', foto=u?.foto||'';
+  return `<div class="in" style="position:relative;overflow:hidden;background:${corDe(nome)};width:${tamanho}px;height:${tamanho}px;
+    border-radius:50%;display:grid;place-items:center;color:#fff;font-size:${Math.max(13,Math.round(tamanho*.34))}px;
+    font-weight:800;flex:none">${iniciais(nome)}${foto?`<img src="${esc(foto)}" alt="Foto de ${esc(nome)}"
+    onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:''}</div>`;
+}
 function blocoEquipe(){
   const ordem = ['presidente','coordenador','social','operador'];
   const termo=equipeBusca.toLocaleLowerCase('pt-BR');
@@ -2386,8 +2393,7 @@ function blocoEquipe(){
   const inicio=(equipePagina-1)*EQUIPE_POR_PAGINA;
   const lista=listaCompleta.slice(inicio,inicio+EQUIPE_POR_PAGINA);
   const linhas = lista.map(u => `<div class="linha-cfg" style="cursor:pointer" onclick="abrirEquipeMembro('${u.id}')">
-    ${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:38px;height:38px;border-radius:50%;
-      display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none">${iniciais(u.nome)}</div>`}
+    ${avatarEquipe(u,38)}
     <div class="t"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
       <small>${esc(ROTULO_PAPEL[u.papel])}${rotuloFuncoesPessoa(u)?' · '+esc(rotuloFuncoesPessoa(u)):''} · ${esc(u.unidade)} · ${esc(u.email)}
@@ -2498,9 +2504,7 @@ function abrirEquipeMembro(uid){
   const participacoes = hist.filter(h => h.tipo === 'presenca').length;
   const faltas = hist.filter(h => h.tipo === 'falta').length;
   const aberta = hist.find(h => h.tipo === 'presenca' && !h.saida);
-  $('em-ficha').innerHTML = `${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none">`:`<div class="in" style="background:${corDe(u.nome)};width:56px;height:56px;
-      border-radius:50%;display:grid;place-items:center;color:#fff;font-size:19px;font-weight:800;flex:none">
-      ${iniciais(u.nome)}</div>`}
+  $('em-ficha').innerHTML = `${avatarEquipe(u,56)}
     <div class="d"><b>${esc(u.nome)}${u.status==='inativo'?' <span class="et">desligado</span>':''}${
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
       <div class="cod">${esc(ROTULO_PAPEL[u.papel])}${rotuloFuncoesPessoa(u)?' · '+esc(rotuloFuncoesPessoa(u)):''} · ${esc(u.email)}</div>
@@ -2555,7 +2559,7 @@ function formPapel(uid){
   $('org-corpo').innerHTML = `
     <div class="pn"><div class="ph"><h2>${novo?'Adicionar pessoa à equipe':esc(u.nome)}</h2></div>
       <div class="cx">
-        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px"><div id="eq-foto-prev">${u.foto?`<img src="${u.foto}" alt="Foto de ${esc(u.nome)}" style="width:72px;height:72px;border-radius:50%;object-fit:cover">`:`<div class="in" style="width:72px;height:72px;border-radius:50%;background:${corDe(u.nome||'Equipe')};display:grid;place-items:center;color:#fff;font-weight:800">${iniciais(u.nome||'EQ')}</div>`}</div>
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px"><div id="eq-foto-prev">${avatarEquipe(u,72)}</div>
           <div><label class="bt g" style="cursor:pointer">Foto de perfil<input type="file" accept="image/*" style="display:none" onchange="pegarFotoEquipe(this)"></label>
           <div class="ajuda" style="margin-top:6px">Imagem opcional, privada e reduzida automaticamente.</div></div></div>
         <div class="gr-form">

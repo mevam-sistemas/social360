@@ -1,7 +1,7 @@
 {
   "name": "social360-release-checks",
   "private": true,
-  "version": "1.4.21",
+  "version": "1.4.22",
   "scripts": {
     "check": "node scripts/check.mjs",
     "test": "node scripts/check.mjs"

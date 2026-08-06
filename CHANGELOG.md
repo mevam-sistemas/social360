@@ -2,6 +2,14 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.22 — 2026-08-06
+
+- Impede que caminhos internos sem URL assinada apareçam como imagens quebradas
+  na lista, na ficha e na edição da equipe.
+- Exibe as iniciais da pessoa como fallback acessível quando uma foto armazenada
+  não puder ser aberta, mantendo disponível a substituição pelo cadastro.
+- Preserva o caminho original no banco para diagnóstico e eventual recuperação.
+
 ## 1.4.21 — 2026-08-06
 
 - Impede que um e-mail já ativo seja cadastrado novamente na mesma equipe e

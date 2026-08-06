@@ -484,7 +484,10 @@ async function carregarTudo(){
   const caminhosEq=[...new Set(eqp.map(u=>u.foto_url)
     .filter(u=>u && !/^data:|^https?:/i.test(u)))],urlsEq=new Map();
   if(caminhosEq.length){const {data}=await sbc.storage.from('fotos-equipe').createSignedUrls(caminhosEq,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsEq.set(x.path,x.signedUrl);});}
-  const urlFotoEquipe=u=>urlsEq.get(u)||u||null;
+  /* Caminho interno sem URL assinada não é uma imagem navegável. Se a
+     assinatura falhar, a interface usa as iniciais e mantém a ficha pronta
+     para receber uma nova foto, em vez de exibir o ícone quebrado do browser. */
+  const urlFotoEquipe=u=>u ? (urlsEq.get(u)||(/^data:|^https?:/i.test(u)?u:null)) : null;
   eqp.forEach(u => { const funcoes=(funcoesPorEquipe.get(u.id)||[]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const funcao=funcoes[0]||nomeFuncao(u.funcao_id);
     EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, nascimento:u.nascimento||'', foto:urlFotoEquipe(u.foto_url),fotoPath:u.foto_url||null,
