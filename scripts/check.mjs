@@ -17,6 +17,10 @@ const version = sw.match(/SOCIAL360_VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1];
 assert(version, 'SOCIAL360_VERSION ausente do service worker');
 assert(pkg.version === version, `package.json (${pkg.version}) e PWA (${version}) divergem`);
 assert(changelog.includes(`## ${version} —`), `CHANGELOG não registra ${version}`);
+const bridgePagina = app.match(/ponte-banco[.]js[?]v=(\d+)/)?.[1];
+const bridgeShell = sw.match(/ponte-banco[.]js[?]v=(\d+)/)?.[1];
+assert(bridgePagina && bridgePagina === bridgeShell,
+  `ponte-banco.js diverge entre página (v${bridgePagina}) e shell PWA (v${bridgeShell})`);
 
 for (const field of ['name', 'short_name', 'start_url', 'scope', 'display', 'icons']) {
   assert(manifest[field], `manifest.json sem ${field}`);

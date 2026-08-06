@@ -2,6 +2,11 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.13 — 2026-08-06
+
+- Login, cadastro e recuperação recebem uma nova identidade de cache, fazendo a semântica acessível chegar imediatamente também a sessões que estavam abertas.
+- O release passa a impedir que a página e o shell PWA apontem para versões diferentes do arquivo de integração.
+
 ## 1.4.12 — 2026-08-06
 
 - Entrada, recuperação de senha e criação de conta passam a anunciar corretamente o contexto de diálogo.
