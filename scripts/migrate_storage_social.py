@@ -111,15 +111,15 @@ def main():
 
     # O bucket compartilhado `fotos` continha somente inscrições do Modox.
     # No projeto novo ele nasce vazio e privado para futuras fotos do 360social.
-    try:
+    target_buckets = {
+        item["id"] for item in json_request(TARGET_URL, TARGET_KEY, "GET", "/storage/v1/bucket")
+    }
+    if "fotos" not in target_buckets:
         json_request(
             TARGET_URL, TARGET_KEY, "POST", "/storage/v1/bucket",
             {"id": "fotos", "name": "fotos", "public": False,
              "file_size_limit": 524288, "allowed_mime_types": ["image/jpeg", "image/webp"]},
         )
-    except urllib.error.HTTPError as error:
-        if error.code != 409:
-            raise
     print(f"Objetos sociais copiados: {copied}")
 
 
