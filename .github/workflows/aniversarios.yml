@@ -1,0 +1,25 @@
+name: Aniversários do 360social
+
+on:
+  schedule:
+    - cron: "15 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Executar rotina protegida
+        env:
+          SUPABASE_URL: ${{ secrets.SOCIAL360_TARGET_URL }}
+          BIRTHDAY_CRON_SECRET: ${{ secrets.BIRTHDAY_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SUPABASE_URL" && -n "$BIRTHDAY_CRON_SECRET" ]]
+          curl --fail --silent --show-error --request POST \
+            --header "x-cron-secret: ${BIRTHDAY_CRON_SECRET}" \
+            "${SUPABASE_URL}/functions/v1/aniversarios"

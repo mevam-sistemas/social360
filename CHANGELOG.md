@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.7 — 2026-08-06
+
+- Aniversários passam a operar inteiramente na base exclusiva do 360social, com histórico próprio contra duplicidade.
+- A rotina diária usa SMTP protegido e linguagem específica para equipe e pessoas atendidas.
+- O Modox deixa de participar da consulta ou do envio de aniversários sociais.
+
 ## 1.4.6 — 2026-08-06
 
 - Produção passa a usar um projeto Supabase exclusivo do 360social, sem compartilhar autenticação, dados ou arquivos com o Modox.
