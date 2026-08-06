@@ -11,6 +11,8 @@ const manifest = JSON.parse(read('web/manifest.json'));
 const changelog = read('CHANGELOG.md');
 const pkg = JSON.parse(read('package.json'));
 const securityMigration = read('supabase/migrations/20260806102000_restringir_anonimo_social.sql');
+const privilegeMigration = read('supabase/migrations/20260806100000_restaurar_privilegios_autenticados.sql');
+const supportFunction = read('supabase/functions/painel-acesso-suporte/index.ts');
 const headers = read('web/_headers');
 
 const version = sw.match(/SOCIAL360_VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1];
@@ -48,6 +50,11 @@ assert(!app.includes('onclick="salvarEmail()"'), 'configuração de envio sem ef
 assert(app.includes('planejado, ainda não envia e-mail'), 'automações futuras não estão identificadas com transparência');
 assert(securityMigration.includes('revoke all on function %s from public, anon'), 'RPCs sociais não revogam acesso anônimo');
 assert(securityMigration.includes('revoke usage on schema social from anon'), 'schema social ainda pode ser usado por anon');
+assert(privilegeMigration.includes('grant usage on schema social to authenticated'), 'schema não pode ser usado por sessões válidas');
+assert(privilegeMigration.includes("from pg_policies"), 'privilégios de tabelas não seguem as políticas RLS');
+assert(privilegeMigration.includes('grant execute on function social.minha_instituicao() to authenticated'), 'auxiliar RLS sem execução autenticada');
+assert(supportFunction.includes('MODOX_AUTH_URL') && supportFunction.includes('/auth/v1/user'), 'painel não valida a sessão central');
+assert(supportFunction.includes('https://painel.arborlabs.com.br') && !supportFunction.includes('"Access-Control-Allow-Origin": "*"'), 'painel de suporte permite origem arbitrária');
 assert(app.includes('.bt.pq{font-size:13px;padding:8px 12px;min-height:44px}'), 'ações compactas não respeitam alvo de toque');
 assert(app.includes('class="app" aria-hidden="true" inert'), 'conteúdo protegido continua navegável antes da autenticação');
 assert(bridge.includes("app.removeAttribute('aria-hidden')"), 'conteúdo autenticado não é reabilitado após a sessão');

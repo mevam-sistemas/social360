@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.14 — 2026-08-06
+
+- Restaura os privilégios SQL autenticados que não acompanharam a migração para o banco exclusivo, mantendo RLS e anonimato bloqueado.
+- A carga completa de instituição, equipe, pessoas, atendimentos, doações, estoque e orientações volta a funcionar.
+- O painel central recebe uma integração segura com o banco exclusivo do 360social e preserva o acesso de suporte sem compartilhar senhas entre produtos.
+
 ## 1.4.13 — 2026-08-06
 
 - Login, cadastro e recuperação recebem uma nova identidade de cache, fazendo a semântica acessível chegar imediatamente também a sessões que estavam abertas.
