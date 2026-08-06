@@ -437,9 +437,19 @@ async function carregarTudo(){
       .order('enviado_em', { ascending:false }).limit(100), 'log de envios')
   ]);
   const o = orgs[0] || {};
+  let logoCarregada=o.logo_url||null;
+  if(logoCarregada){
+    const marcador='/logos-instituicoes/';
+    const caminho=logoCarregada.includes(marcador)
+      ? decodeURIComponent(logoCarregada.split(marcador).pop().split('?')[0])
+      : logoCarregada;
+    const {data:logoAssinada,error:erroLogo}=await sbc.storage.from('logos-instituicoes').createSignedUrl(caminho,3600);
+    if(!erroLogo&&logoAssinada?.signedUrl)logoCarregada=logoAssinada.signedUrl;
+    else console.error('[banco] assinar logo',erroLogo);
+  }
   Object.assign(ORG, { nome:o.nome||ORG.nome, nomeCompleto:o.nome_completo||'', cidade:o.cidade||'',
     cnpj:o.cnpj||'', endereco:o.endereco||'', telefone:o.telefone||'', email:o.email||'',
-    site:o.site||'', responsavel:o.responsavel||'', logo:o.logo_url||null });
+    site:o.site||'', responsavel:o.responsavel||'', logo:logoCarregada });
   /* config_email só existe se a instituição já foi seedada (RLS: só quem tem
      pode('config_org') enxerga a linha). O endereço técnico de envio é
      gerenciado no servidor e, por isso, não aparece como campo editável. */

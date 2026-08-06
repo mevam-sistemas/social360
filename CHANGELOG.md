@@ -2,6 +2,11 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.17 — 2026-08-06
+
+- carrega a logo institucional por URL temporária autenticada;
+- valida bytes reais da logo e das fotos após a migração do Storage.
+
 ## 1.4.16 — 2026-08-06
 
 - restaura logos e fotos da equipe após a separação do banco do 360social;

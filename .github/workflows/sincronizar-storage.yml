@@ -135,7 +135,15 @@ jobs:
           logo_urls = [line for line in (runner / "logo-url.txt").read_text().splitlines() if line]
           if not logo_urls:
               raise SystemExit("Nenhuma logo disponível para validação")
-          with urllib.request.urlopen(logo_urls[0], timeout=60) as response:
+          marker = "/logos-instituicoes/"
+          if marker not in logo_urls[0]:
+              raise SystemExit("A referência da logo não contém o bucket esperado")
+          logo_path = urllib.parse.unquote(logo_urls[0].split(marker, 1)[1].split("?", 1)[0])
+          logo_url = f"{base}/storage/v1/object/logos-instituicoes/{urllib.parse.quote(logo_path, safe='/')}"
+          logo_request = urllib.request.Request(
+              logo_url, headers={"apikey": key, "Authorization": f"Bearer {key}"}
+          )
+          with urllib.request.urlopen(logo_request, timeout=60) as response:
               logo = response.read(32)
           if not is_image(logo):
               raise SystemExit("A logo publicada não contém bytes de imagem válidos")
