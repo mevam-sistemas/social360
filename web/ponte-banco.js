@@ -220,6 +220,7 @@ async function entrarComVinculo(data){
   // sessão de verdade confirmada: some com a tela de boas-vindas (01/08/2026)
   // — só existia pra cobrir o painel de demonstração até aqui.
   const bv = document.getElementById('boas-vindas'); if(bv) bv.remove();
+  const app = document.querySelector('.app'); if(app) app.removeAttribute('aria-hidden');
   const pt = P_DB2TELA[data.papel] || 'operador';
   SESSAO = { papel: pt, papelReal:pt, nome: data.nome, rotulo: ROTULO_PAPEL[pt] };
   document.querySelectorAll('.rodape-l button').forEach(b => {

@@ -2,6 +2,13 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.10 — 2026-08-06
+
+- A tela inicial oculta o painel protegido também das tecnologias assistivas até a sessão ser confirmada.
+- Busca principal e regiões da página ganham estrutura semântica para leitores de tela.
+- Links legais passam a respeitar área mínima de toque em celular e tablet.
+- A aplicação deixa de aceitar incorporação em páginas de terceiros, reduzindo risco de clickjacking.
+
 ## 1.4.9 — 2026-08-06
 
 - A assinatura institucional e seu webhook passam a operar exclusivamente no ambiente do 360social.

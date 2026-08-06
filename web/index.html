@@ -152,6 +152,9 @@ a{color:inherit}
 .bt-icone svg{width:20px;height:20px}
 .bt-voltar{display:none;align-items:center;gap:7px;min-height:44px}
 button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--lar);outline-offset:3px}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.boas-legal{margin-top:18px;font-size:11.5px;line-height:1.5;color:var(--tx3);display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap}
+.boas-legal a{display:inline-flex;align-items:center;min-height:44px;padding:8px 4px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 /* ---------- painel ---------- */
@@ -564,7 +567,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
      assim que uma sessão de verdade é confirmada, em entrarComVinculo().
      Sem essa tela, o cadastro/login abria com o painel fictício do SOS
      Vida aparecendo desfocado atrás — confuso pra quem está chegando agora. -->
-<div id="boas-vindas" style="position:fixed;inset:0;z-index:9000;display:flex;
+<main id="boas-vindas" style="position:fixed;inset:0;z-index:9000;display:flex;
   align-items:center;justify-content:center;padding:24px;
   background:linear-gradient(160deg,#fff 0%,#fff7ef 55%,#ffe9d6 100%)">
   <div style="max-width:400px;width:100%;text-align:center">
@@ -577,7 +580,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button onclick="abrirCadastroCompleto()" class="bt gr"
       style="width:100%;background:var(--lar);border-color:var(--lar)">Criar conta — 7 dias grátis</button>
     <button onclick="abrirEntrar()" class="bt g" style="width:100%;margin-top:10px">Já sou cliente — Entrar</button>
-    <div style="margin-top:18px;font-size:11.5px;line-height:1.5;color:var(--tx3)">
+    <div class="boas-legal">
       <a href="https://360social.com.br/legal.html#termos" target="_blank" rel="noopener">Termos de Uso</a> ·
       <a href="https://360social.com.br/legal.html#privacidade" target="_blank" rel="noopener">Privacidade</a> ·
       <a href="https://360social.com.br/legal.html#tecnologias" target="_blank" rel="noopener">Cookies e armazenamento</a>
@@ -588,9 +591,9 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
       Arbor Labs · desenvolvido orgulhosamente no Brasil
     </div>
   </div>
-</div>
+</main>
 
-<div class="app">
+<div class="app" aria-hidden="true">
   <aside class="lado">
     <div class="cabec">
       <button class="marca-org" onclick="irMenu(inicioDoPapel())" title="Início">
@@ -612,7 +615,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
   </aside>
 
-  <div class="obra">
+  <main class="obra" id="conteudo-principal">
     <div class="topo-m">
       <button class="marca-org" style="width:auto" onclick="irMenu(inicioDoPapel())">
         <span class="logo" id="m-logo" style="width:28px;height:28px;border-radius:8px;font-size:11px"></span>
@@ -640,6 +643,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
             <div style="position:relative">
               <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--tx4)">
                 <svg width="18" height="18"><use href="#i-lupa"/></svg></span>
+              <label class="sr-only" for="q0">Buscar pessoa por nome, documento, telefone ou código</label>
               <input type="search" id="q0" placeholder="Nome, apelido, CPF, RG, telefone ou código"
                 autocomplete="off" style="padding-left:40px;padding-top:13px;padding-bottom:13px;font-size:16px"
                 oninput="buscarNo('q0','r0')">
@@ -939,7 +943,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
       </section>
 
     </div>
-  </div>
+  </main>
 </div>
 
 <div class="acao" id="acao">
@@ -971,6 +975,31 @@ fetch('/sw.js',{cache:'no-store'}).then(r=>r.text()).then(t=>{
    e não deve ser, até existir base legal e contrato.
    ============================================================ */
 const $ = id => document.getElementById(id);
+let a11yCampoSeq = 0;
+function associarRotulos(root=document){
+  const escopo = root.querySelectorAll ? root : document;
+  escopo.querySelectorAll('label:not([for])').forEach(label => {
+    if(label.querySelector('input,select,textarea')) return;
+    let campo = label.nextElementSibling;
+    if(!campo?.matches?.('input,select,textarea')){
+      const candidatos = label.parentElement?.querySelectorAll(':scope > input,:scope > select,:scope > textarea') || [];
+      if(candidatos.length === 1) campo = candidatos[0];
+    }
+    if(!campo?.matches?.('input,select,textarea')) return;
+    if(!campo.id) campo.id = `campo-acessivel-${++a11yCampoSeq}`;
+    label.htmlFor = campo.id;
+  });
+  escopo.querySelectorAll('input:not([type=hidden]),select,textarea').forEach(campo => {
+    if(campo.labels?.length || campo.hasAttribute('aria-label') || campo.hasAttribute('aria-labelledby')) return;
+    const nome = campo.getAttribute('placeholder') || campo.getAttribute('name');
+    if(nome) campo.setAttribute('aria-label', nome);
+  });
+}
+associarRotulos();
+const observadorA11y = new MutationObserver(mudancas => {
+  mudancas.forEach(m => m.addedNodes.forEach(no => { if(no.nodeType === 1) associarRotulos(no); }));
+});
+observadorA11y.observe(document.body,{childList:true,subtree:true});
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* Confirmação própria do app, no lugar do confirm() nativo do navegador
    (aquela caixinha cinza do sistema operacional, fora do visual do 360social). */
