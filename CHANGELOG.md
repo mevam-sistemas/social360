@@ -2,6 +2,11 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.11 — 2026-08-06
+
+- O painel protegido deixa de participar da navegação por teclado e da árvore assistiva enquanto a tela de entrada estiver aberta.
+- Após a autenticação, o painel é reabilitado integralmente para teclado e leitores de tela.
+
 ## 1.4.10 — 2026-08-06
 
 - A tela inicial oculta o painel protegido também das tecnologias assistivas até a sessão ser confirmada.

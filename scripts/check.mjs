@@ -45,8 +45,9 @@ assert(app.includes('planejado, ainda não envia e-mail'), 'automações futuras
 assert(securityMigration.includes('revoke all on function %s from public, anon'), 'RPCs sociais não revogam acesso anônimo');
 assert(securityMigration.includes('revoke usage on schema social from anon'), 'schema social ainda pode ser usado por anon');
 assert(app.includes('.bt.pq{font-size:13px;padding:8px 12px;min-height:44px}'), 'ações compactas não respeitam alvo de toque');
-assert(app.includes('class="app" aria-hidden="true"'), 'conteúdo protegido aparece para tecnologia assistiva antes da autenticação');
+assert(app.includes('class="app" aria-hidden="true" inert'), 'conteúdo protegido continua navegável antes da autenticação');
 assert(bridge.includes("app.removeAttribute('aria-hidden')"), 'conteúdo autenticado não é reabilitado após a sessão');
+assert(bridge.includes("app.removeAttribute('inert')"), 'conteúdo autenticado permanece inerte após a sessão');
 assert(app.includes('for="q0"'), 'busca principal não possui rótulo semântico');
 assert(app.includes('.boas-legal a{display:inline-flex;align-items:center;min-height:44px'), 'links legais não respeitam alvo de toque');
 assert(app.includes('<main class="obra"'), 'aplicação não declara sua região principal');
