@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.15 — 2026-08-06
+
+- Padroniza SMTP, remetente, assuntos e modelos de autenticação na infraestrutura
+  Brevo da Arbor Labs.
+- Confirmação, convite e recuperação passam a exibir a assinatura institucional.
+
 ## 1.4.14 — 2026-08-06
 
 - Restaura os privilégios SQL autenticados que não acompanharam a migração para o banco exclusivo, mantendo RLS e anonimato bloqueado.
