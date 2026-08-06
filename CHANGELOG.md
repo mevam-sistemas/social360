@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.16 — 2026-08-06
+
+- restaura logos e fotos da equipe após a separação do banco do 360social;
+- aceita com segurança fotos legadas armazenadas como URL ou data URL;
+- torna a sincronização dos buckets repetível e cria buckets ausentes.
+
 ## 1.4.15 — 2026-08-06
 
 - Padroniza SMTP, remetente, assuntos e modelos de autenticação na infraestrutura

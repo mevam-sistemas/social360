@@ -471,11 +471,13 @@ async function carregarTudo(){
     const lista=funcoesPorEquipe.get(ef.equipe_id)||[]; lista.push(nome); funcoesPorEquipe.set(ef.equipe_id,lista);
   });
   EQUIPE.length = 0;
-  const caminhosEq=[...new Set(eqp.map(u=>u.foto_url).filter(Boolean))],urlsEq=new Map();
+  const caminhosEq=[...new Set(eqp.map(u=>u.foto_url)
+    .filter(u=>u && !/^data:|^https?:/i.test(u)))],urlsEq=new Map();
   if(caminhosEq.length){const {data}=await sbc.storage.from('fotos-equipe').createSignedUrls(caminhosEq,3600);(data||[]).forEach(x=>{if(x.signedUrl)urlsEq.set(x.path,x.signedUrl);});}
+  const urlFotoEquipe=u=>urlsEq.get(u)||u||null;
   eqp.forEach(u => { const funcoes=(funcoesPorEquipe.get(u.id)||[]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const funcao=funcoes[0]||nomeFuncao(u.funcao_id);
-    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, nascimento:u.nascimento||'', foto:urlsEq.get(u.foto_url)||null,fotoPath:u.foto_url||null,
+    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, nascimento:u.nascimento||'', foto:urlFotoEquipe(u.foto_url),fotoPath:u.foto_url||null,
     papel: P_DB2TELA[u.papel] || 'operador',
     unidade: u.unidade_id ? ((LOCAIS.find(l => l.id === u.unidade_id) || {}).curto || 'Todas') : 'Todas',
     funcao, funcoes:funcoes.length?funcoes:(funcao?[funcao]:[]),

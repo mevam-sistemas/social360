@@ -21,6 +21,14 @@ SOCIAL_BUCKETS = {
     "fotos-equipe",
 }
 
+BUCKET_DEFAULTS = {
+    "logos-instituicoes": (True, 122880, ["image/webp"]),
+    "documentos-pessoas": (False, 5 * 1024 * 1024, None),
+    "diretivas": (False, 245760, ["image/webp"]),
+    "diretivas-audios": (False, 8 * 1024 * 1024, None),
+    "fotos-equipe": (False, 245760, ["image/webp"]),
+}
+
 
 def headers(key, content_type="application/json"):
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": content_type}
@@ -90,14 +98,13 @@ def main():
     copied = 0
     for bucket in sorted(SOCIAL_BUCKETS):
         info = source_buckets.get(bucket)
-        if not info:
-            continue
+        public, size_limit, mime_types = BUCKET_DEFAULTS[bucket]
         definition = {
             "id": bucket,
             "name": bucket,
-            "public": bool(info.get("public")),
-            "file_size_limit": info.get("file_size_limit"),
-            "allowed_mime_types": info.get("allowed_mime_types"),
+            "public": bool(info.get("public")) if info else public,
+            "file_size_limit": info.get("file_size_limit") if info else size_limit,
+            "allowed_mime_types": info.get("allowed_mime_types") if info else mime_types,
         }
         try:
             json_request(TARGET_URL, TARGET_KEY, "POST", "/storage/v1/bucket", definition)
@@ -105,9 +112,10 @@ def main():
             if error.code != 409:
                 raise
             json_request(TARGET_URL, TARGET_KEY, "PUT", f"/storage/v1/bucket/{bucket}", definition)
-        for name, metadata in list_prefix(bucket):
-            copy_object(bucket, name, metadata)
-            copied += 1
+        if info:
+            for name, metadata in list_prefix(bucket):
+                copy_object(bucket, name, metadata)
+                copied += 1
 
     # O bucket compartilhado `fotos` continha somente inscrições do Modox.
     # No projeto novo ele nasce vazio e privado para futuras fotos do 360social.
