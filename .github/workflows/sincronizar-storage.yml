@@ -53,23 +53,19 @@ jobs:
         run: |
           set -euo pipefail
           psql "$SOCIAL360_TARGET_DB_URL" -v ON_ERROR_STOP=1 -At <<'SQL'
-          select 'equipe|' || case
+          select 'equipe|' || tipo || '|' || count(*) from (select case
             when foto_url is null or btrim(foto_url) = '' then 'vazia'
             when foto_url like 'data:%' then 'data-url'
             when foto_url like 'http%' then 'url-' || split_part(split_part(foto_url, '://', 2), '/', 1)
             else 'caminho-storage'
-          end || '|' || count(*)
-          from social.equipe
-          group by 1;
+          end as tipo from social.equipe) dados group by tipo;
 
-          select 'logo|' || case
+          select 'logo|' || tipo || '|' || count(*) from (select case
             when logo_url is null or btrim(logo_url) = '' then 'vazia'
             when logo_url like 'data:%' then 'data-url'
             when logo_url like 'http%' then 'url-' || split_part(split_part(logo_url, '://', 2), '/', 1)
             else 'caminho-storage'
-          end || '|' || count(*)
-          from social.instituicoes
-          group by 1;
+          end as tipo from social.instituicoes) dados group by tipo;
           SQL
 
       - name: Confirmar objetos copiados
