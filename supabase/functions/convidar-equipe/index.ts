@@ -3,7 +3,7 @@ import { withSupabase } from 'jsr:@supabase/server@^1';
 const origem = 'https://app.360social.com.br';
 const cors = {
   'Access-Control-Allow-Origin': origem,
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 

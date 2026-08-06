@@ -2,6 +2,13 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.19 — 2026-08-06
+
+- Autoriza o cabeçalho de identificação enviado pelo cliente Supabase no CORS das
+  funções de recuperação e convite.
+- Corrige a falha de preflight que impedia o navegador de alcançar as funções
+  publicadas, antes mesmo da geração do link ou do envio pelo Brevo.
+
 ## 1.4.18 — 2026-08-06
 
 - Unifica recuperação de senha, convites e aniversários no Brevo da Arbor Labs.
