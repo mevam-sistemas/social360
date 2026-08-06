@@ -95,6 +95,9 @@ def main():
     source_buckets = {
         item["id"]: item for item in json_request(SOURCE_URL, SOURCE_KEY, "GET", "/storage/v1/bucket")
     }
+    target_buckets = {
+        item["id"] for item in json_request(TARGET_URL, TARGET_KEY, "GET", "/storage/v1/bucket")
+    }
     copied = 0
     for bucket in sorted(SOCIAL_BUCKETS):
         info = source_buckets.get(bucket)
@@ -106,11 +109,11 @@ def main():
             "file_size_limit": info.get("file_size_limit") if info else size_limit,
             "allowed_mime_types": info.get("allowed_mime_types") if info else mime_types,
         }
-        try:
+        definition = {key: value for key, value in definition.items() if value is not None}
+        if bucket not in target_buckets:
             json_request(TARGET_URL, TARGET_KEY, "POST", "/storage/v1/bucket", definition)
-        except urllib.error.HTTPError as error:
-            if error.code != 409:
-                raise
+            target_buckets.add(bucket)
+        else:
             json_request(TARGET_URL, TARGET_KEY, "PUT", f"/storage/v1/bucket/{bucket}", definition)
         if info:
             for name, metadata in list_prefix(bucket):
@@ -119,9 +122,6 @@ def main():
 
     # O bucket compartilhado `fotos` continha somente inscrições do Modox.
     # No projeto novo ele nasce vazio e privado para futuras fotos do 360social.
-    target_buckets = {
-        item["id"] for item in json_request(TARGET_URL, TARGET_KEY, "GET", "/storage/v1/bucket")
-    }
     if "fotos" not in target_buckets:
         json_request(
             TARGET_URL, TARGET_KEY, "POST", "/storage/v1/bucket",
