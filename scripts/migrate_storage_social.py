@@ -79,9 +79,12 @@ def copy_object(bucket, name, metadata):
         f"{SOURCE_URL}/storage/v1/object{path}", headers=headers(SOURCE_KEY)
     )
     content_type = metadata.get("mimetype") or mimetypes.guess_type(name)[0] or "application/octet-stream"
-    with urllib.request.urlopen(download, timeout=300) as source, tempfile.SpooledTemporaryFile(
-        max_size=8 * 1024 * 1024
-    ) as payload:
+    try:
+        source_response = urllib.request.urlopen(download, timeout=300)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", "replace")[:500]
+        raise RuntimeError(f"Falha ao baixar objeto do bucket {bucket}: HTTP {error.code} — {detail}") from error
+    with source_response as source, tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as payload:
         while chunk := source.read(1024 * 1024):
             payload.write(chunk)
         payload.seek(0)
