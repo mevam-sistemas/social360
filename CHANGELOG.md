@@ -2,6 +2,12 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.9 — 2026-08-06
+
+- A assinatura institucional e seu webhook passam a operar exclusivamente no ambiente do 360social.
+- O retorno de pagamento aceita somente o endereço secreto entregue ao provedor e confirma os dados na API antes de alterar o plano.
+- O antigo webhook compartilhado com o Modox deixa de ser necessário para novas assinaturas sociais.
+
 ## 1.4.8 — 2026-08-06
 
 - A marca institucional usada como ação de início passa a respeitar alvo de toque de 44 px no desktop, tablet e celular.
