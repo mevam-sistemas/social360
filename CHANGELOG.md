@@ -2,6 +2,10 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.4.8 — 2026-08-06
+
+- A marca institucional usada como ação de início passa a respeitar alvo de toque de 44 px no desktop, tablet e celular.
+
 ## 1.4.7 — 2026-08-06
 
 - Aniversários passam a operar inteiramente na base exclusiva do 360social, com histórico próprio contra duplicidade.
