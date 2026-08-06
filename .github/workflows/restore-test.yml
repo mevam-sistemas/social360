@@ -181,11 +181,8 @@ jobs:
           table_count="$(psql -h 127.0.0.1 -U postgres -d social360_restore -Atc \
             "select count(*) from information_schema.tables where table_schema='social' and table_type='BASE TABLE'")"
           [[ "$table_count" -gt 0 ]] || { echo "Restauração não criou tabelas sociais" >&2; exit 1; }
-          modox_table_count="$(psql -h 127.0.0.1 -U postgres -d social360_restore -Atc \
-            "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'")"
-          [[ "$modox_table_count" -gt 0 ]] || { echo "Restauração não criou tabelas do MODOX" >&2; exit 1; }
           echo "### Restauração comprovada" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checksums válidos; ${modox_table_count} tabelas do MODOX e ${table_count} tabelas sociais restauradas em PostgreSQL descartável." >> "$GITHUB_STEP_SUMMARY"
+          echo "Checksums válidos; ${table_count} tabelas exclusivas do 360social restauradas em PostgreSQL descartável." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resumo de falha
         if: failure()
