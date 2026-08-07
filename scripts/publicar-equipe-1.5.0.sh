@@ -22,6 +22,10 @@ if [[ "$linked_ref" != "$PROJECT_REF" ]]; then
 fi
 
 echo "Projeto confirmado: 360social ($PROJECT_REF)"
+echo "Enviando a correção dos repositórios..."
+git -C "${REPO_DIR}/../ct360" push origin marco-zero
+git -C "$REPO_DIR" push origin main
+
 echo "Publicando a migração do telefone, auditoria e exportações..."
 "$CLI" db push --include-all
 
