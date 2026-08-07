@@ -2,7 +2,7 @@
 
 ## Contato rápido da equipe por WhatsApp
 
-**Estado:** planejado.
+**Estado:** implementado na versão 1.5.0; publicação e homologação em produção pendentes.
 
 - Exibir na lista geral de **Equipe e Acessos** um ícone de WhatsApp ao lado de cada integrante que
   possua celular cadastrado.
@@ -18,7 +18,7 @@
 
 ## Sincronização segura do e-mail de acesso
 
-**Estado:** planejado — inconsistência confirmada em homologação.
+**Estado:** implementado na versão 1.5.0; publicação e homologação em produção pendentes.
 
 - Ao alterar o e-mail de uma pessoa com acesso, sincronizar a ficha `social.equipe` e a identidade
   correspondente em `auth.users`; nunca exibir sucesso quando apenas um dos registros foi alterado.

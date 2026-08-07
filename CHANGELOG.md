@@ -2,6 +2,16 @@
 
 Este projeto usa versionamento semântico: `MAIOR.MENOR.CORREÇÃO`.
 
+## 1.5.0 — 2026-08-06
+
+- Inclui telefone/WhatsApp no cadastro e um atalho acessível de contato na lista da equipe.
+- Gera a relação completa da equipe em formato pronto para PDF, com foto, nome, telefone e
+  e-mail, respeitando a permissão `gerir_equipe` e registrando a exportação para auditoria.
+- Sincroniza de forma transacional compensável a troca de e-mail entre `social.equipe` e
+  `auth.users`, com confirmação explícita, autorização no servidor e trilha de auditoria.
+- Mantém o endereço anterior quando a sincronização falha e informa o operador sem expor
+  detalhes internos do banco ou da autenticação.
+
 ## 1.4.22 — 2026-08-06
 
 - Impede que caminhos internos sem URL assinada apareçam como imagens quebradas

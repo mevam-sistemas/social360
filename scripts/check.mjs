@@ -15,6 +15,8 @@ const privilegeMigration = read('supabase/migrations/20260806100000_restaurar_pr
 const supportFunction = read('supabase/functions/painel-acesso-suporte/index.ts');
 const recoveryFunction = read('supabase/functions/recuperar-senha-360social/index.ts');
 const headers = read('web/_headers');
+const equipeMigration = read('supabase/migrations/20260806223000_contato_e_email_equipe.sql');
+const equipeEmailFunction = read('supabase/functions/atualizar-email-equipe/index.ts');
 
 const version = sw.match(/SOCIAL360_VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1];
 assert(version, 'SOCIAL360_VERSION ausente do service worker');
@@ -70,6 +72,12 @@ assert(bridge.includes("painel?.setAttribute('aria-modal','true')"), 'modais nã
 assert(bridge.includes("event.key === 'Escape'"), 'modais não podem ser fechados pelo teclado');
 assert(headers.includes('X-Frame-Options: DENY'), 'aplicação ainda aceita enquadramento por terceiros');
 assert(headers.includes("frame-ancestors 'none'"), 'CSP ainda permite clickjacking');
+assert(app.includes('Baixar equipe em PDF') && app.includes('equipe_exportacoes'), 'exportação auditável da equipe ausente');
+assert(app.includes('linkWhatsEquipe') && bridge.includes('telefone'), 'contato WhatsApp da equipe ausente');
+assert(bridge.includes("functions.invoke('atualizar-email-equipe'"), 'alteração de e-mail não usa a função segura');
+assert(equipeEmailFunction.includes("rpc('pode',{acao:'gerir_equipe'})"), 'sincronização de e-mail não valida permissão');
+assert(equipeEmailFunction.includes('updateUserById') && equipeEmailFunction.includes("status=erroReversao?'falhou':'revertida'"), 'sincronização de e-mail não possui compensação');
+assert(equipeMigration.includes('equipe_email_alteracoes') && equipeMigration.includes('equipe_exportacoes'), 'auditoria de equipe não foi migrada');
 
 const walk = dir => readdirSync(dir).flatMap(name => {
   const path = join(dir, name);

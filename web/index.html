@@ -2381,6 +2381,24 @@ function avatarEquipe(u,tamanho=38){
     font-weight:800;flex:none">${iniciais(nome)}${foto?`<img src="${esc(foto)}" alt="Foto de ${esc(nome)}"
     onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:''}</div>`;
 }
+function linkWhatsEquipe(telefone){
+  let numero=String(telefone||'').replace(/\D/g,'');
+  if(numero.length<10||numero.length>13)return '';
+  if(!numero.startsWith('55'))numero='55'+numero;
+  return 'https://wa.me/'+numero;
+}
+const ICONE_WHATSAPP=`<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.2 14.2c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.7 0-1.3.7-1.9.9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.6.8 1.9.8 2 .1.1.1.3 0 .5-.3.6-.7.9-.5 1.2.7 1.2 1.6 2 2.8 2.6.3.2.5.1.7-.1l.7-.9c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.1.1.6-.2 1.2z"/></svg>`;
+function baixarEquipePDF(){
+  if(!pode('gerir_equipe'))return;
+  const lista=EQUIPE.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const janela=window.open('','_blank');
+  if(!janela){alert('O navegador bloqueou a janela do PDF. Permita pop-ups para o 360social e tente novamente.');return;}
+  janela.opener=null;
+  const linhas=lista.map(u=>`<tr><td>${u.foto?`<img src="${esc(u.foto)}" alt="">`:`<span class="avatar">${esc(iniciais(u.nome))}</span>`}</td><td><b>${esc(u.nome)}</b><small>${esc(ROTULO_PAPEL[u.papel]||'')} · ${esc(rotuloFuncoesPessoa(u)||'')}</small></td><td>${esc(u.telefone||'—')}</td><td>${esc(u.email||'—')}</td></tr>`).join('');
+  janela.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Equipe — ${esc(ORG.nome)}</title><style>@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#202124;margin:0}header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #f26a1b;padding-bottom:14px;margin-bottom:18px}header img{width:52px;height:52px;object-fit:contain}h1{font-size:21px;margin:0}header p{margin:3px 0 0;color:#6e737d;font-size:12px}table{width:100%;border-collapse:collapse;font-size:11px}th{text-align:left;color:#6e737d;font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:8px;border-bottom:1px solid #dfe2e7}td{padding:9px 8px;border-bottom:1px solid #eceef1;vertical-align:middle}td:first-child{width:48px}td:nth-child(3){width:122px}td:nth-child(4){width:180px;word-break:break-word}td img,.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:#fff1e6;color:#c2500c;font-weight:800}small{display:block;color:#6e737d;margin-top:3px}footer{margin-top:16px;border-top:1px solid #dfe2e7;padding-top:8px;color:#777;font-size:9px;display:flex;justify-content:space-between}tr{break-inside:avoid}</style></head><body><header>${ORG.logo?`<img src="${esc(ORG.logo)}" alt="">`:''}<div><h1>Equipe de trabalho</h1><p>${esc(ORG.nome)} · ${lista.length} pessoa${lista.length===1?'':'s'}</p></div></header><table><thead><tr><th>Foto</th><th>Nome completo</th><th>Telefone</th><th>E-mail</th></tr></thead><tbody>${linhas}</tbody></table><footer><span>360social · Arbor Labs</span><span>Gerado por ${esc(SESSAO.nome)} em ${new Date().toLocaleString('pt-BR')}</span></footer><script>addEventListener('load',()=>setTimeout(()=>print(),350))<\/script></body></html>`);
+  janela.document.close();
+  if(typeof sbc!=='undefined'&&CONEXAO?.ligada)pushDB(sbc.from('equipe_exportacoes').insert({instituicao_id:CONEXAO.orgId,exportada_por:CONEXAO.eu.id,total_registros:lista.length}),'o registro da exportação da equipe');
+}
 function blocoEquipe(){
   const ordem = ['presidente','coordenador','social','operador'];
   const termo=equipeBusca.toLocaleLowerCase('pt-BR');
@@ -2398,6 +2416,7 @@ function blocoEquipe(){
       u.acesso==='nao'?' <span class="et">sem acesso ao sistema</span>':''}</b>
       <small>${esc(ROTULO_PAPEL[u.papel])}${rotuloFuncoesPessoa(u)?' · '+esc(rotuloFuncoesPessoa(u)):''} · ${esc(u.unidade)} · ${esc(u.email)}
       </small></div>
+    ${linkWhatsEquipe(u.telefone)?`<a class="bt g pq" href="${linkWhatsEquipe(u.telefone)}" target="_blank" rel="noopener noreferrer" aria-label="Conversar com ${esc(u.nome)} pelo WhatsApp" title="Conversar pelo WhatsApp" onclick="event.stopPropagation()" style="color:#12805c">${ICONE_WHATSAPP}<span class="sr-only">WhatsApp</span></a>`:''}
     <button class="bt g pq" onclick="event.stopPropagation();formPapel('${u.id}')">Papel e acesso</button>
   </div>`).join('');
 
@@ -2443,6 +2462,7 @@ function blocoEquipe(){
         onkeydown="if(event.key==='Enter'){event.preventDefault();filtrarEquipe(this.value)}">
       <button class="bt g" onclick="filtrarEquipe(this.previousElementSibling.value)">Buscar</button>
       ${equipeBusca?`<button class="bt g" onclick="filtrarEquipe('')">Limpar</button>`:''}
+      ${pode('gerir_equipe')?`<button class="bt g" onclick="baixarEquipePDF()">Baixar equipe em PDF</button>`:''}
     </div></div>
     ${linhas}
     ${listaCompleta.length?`<div class="cx" style="border-top:1px solid var(--ln2)"><div class="linha" style="justify-content:center">
@@ -2567,6 +2587,8 @@ function formPapel(uid){
             <input id="eq-nome" value="${esc(u.nome)}"></label>
           <label class="cp"><span>E-mail</span>
             <input id="eq-email" type="email" value="${esc(u.email)}"></label>
+          <label class="cp"><span>Telefone / WhatsApp</span>
+            <input id="eq-telefone" inputmode="tel" autocomplete="tel" value="${esc(u.telefone||'')}" placeholder="(DD) 9 9999-9999"></label>
           <label class="cp"><span>Data de nascimento <span class="op">— para felicitação de aniversário</span></span>
             <input id="eq-nascimento" type="date" value="${esc(u.nascimento||'')}"></label>
           <label class="cp"><span>Papel — decide o que pode fazer no sistema</span>
@@ -2617,6 +2639,7 @@ function avisoPapel(){
 function salvarPapel(uid){
   const nome = $('eq-nome').value.trim();
   const email = $('eq-email').value.trim();
+  const telefone = $('eq-telefone').value.trim();
   const nascimento = $('eq-nascimento').value || null;
   const papel = $('eq-papel').value;
   const funcoes = [...document.querySelectorAll('[name="eq-funcao"]:checked')].map(e=>e.value);
@@ -2625,8 +2648,8 @@ function salvarPapel(uid){
   const obs = $('eq-obs').value.trim();
   if(!nome){ $('eq-nome').focus(); return; }
   const u = EQUIPE.find(x => x.id === uid);
-  if(u){ Object.assign(u, { nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
-  else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, nascimento, papel, funcao, funcoes, acesso, obs,
+  if(u){ Object.assign(u, { nome, email, telefone, nascimento, papel, funcao, funcoes, acesso, obs, unidade:$('eq-unidade').value, foto:fotoEquipeNova||u.foto }); }
+  else EQUIPE.push({ id:'u'+(EQUIPE.length+1), nome, email, telefone, nascimento, papel, funcao, funcoes, acesso, obs,
     unidade:$('eq-unidade').value, status:'ativo', desde: iso(new Date()),foto:fotoEquipeNova });
   abrirInstituicao('equipe');
   $('org-corpo').insertAdjacentHTML('afterbegin',
@@ -4370,6 +4393,6 @@ setInterval(() => {
 </script>
 <script src="supabase.min.js"></script>
 <script src="qrcode.js?v=1"></script>
-<script src="ponte-banco.js?v=30"></script>
+<script src="ponte-banco.js?v=31"></script>
 <script src="pwa.js?v=2"></script>
 </body></html>

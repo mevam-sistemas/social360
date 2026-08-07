@@ -420,7 +420,7 @@ async function carregarTudo(){
     pega(sbc.from('instituicoes').select('*').limit(1), 'instituição'),
     pega(sbc.from('unidades').select('*').order('nome'), 'unidades'),
     pega(sbc.from('servicos').select('*').order('ordem'), 'serviços'),
-    pega(sbc.from('equipe').select('id,nome,email,nascimento,foto_url,papel,unidade_id,funcao_id,ativo,tem_acesso,criado_em,observacao').order('criado_em'), 'equipe'),
+    pega(sbc.from('equipe').select('id,nome,email,telefone,nascimento,foto_url,papel,unidade_id,funcao_id,ativo,tem_acesso,criado_em,observacao').order('criado_em'), 'equipe'),
     pega(sbc.from('funcoes').select('*').order('nome'), 'funções'),
     pega(sbc.from('equipe_funcoes').select('equipe_id,funcao_id'), 'funções da equipe'),
     pega(sbc.from('config_email').select('*').eq('instituicao_id', CONEXAO.orgId), 'config de e-mail'),
@@ -490,7 +490,7 @@ async function carregarTudo(){
   const urlFotoEquipe=u=>u ? (urlsEq.get(u)||(/^data:|^https?:/i.test(u)?u:null)) : null;
   eqp.forEach(u => { const funcoes=(funcoesPorEquipe.get(u.id)||[]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const funcao=funcoes[0]||nomeFuncao(u.funcao_id);
-    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, nascimento:u.nascimento||'', foto:urlFotoEquipe(u.foto_url),fotoPath:u.foto_url||null,
+    EQUIPE.push({ id:u.id, nome:u.nome, email:u.email, telefone:u.telefone||'', nascimento:u.nascimento||'', foto:urlFotoEquipe(u.foto_url),fotoPath:u.foto_url||null,
     papel: P_DB2TELA[u.papel] || 'operador',
     unidade: u.unidade_id ? ((LOCAIS.find(l => l.id === u.unidade_id) || {}).curto || 'Todas') : 'Todas',
     funcao, funcoes:funcoes.length?funcoes:(funcao?[funcao]:[]),
@@ -908,12 +908,14 @@ salvarEdicao = async function(){
 const demoSalvarPapel = salvarPapel;
 salvarPapel = async function(uid){
   if(!CONEXAO.ligada) return demoSalvarPapel(uid);
-  const nome = $('eq-nome').value.trim(), email = $('eq-email').value.trim().toLowerCase(), nascimento=$('eq-nascimento').value||null,
+  const nome = $('eq-nome').value.trim(), email = $('eq-email').value.trim().toLowerCase(), telefone=$('eq-telefone').value.trim(), nascimento=$('eq-nascimento').value||null,
         papel = $('eq-papel').value, obs = $('eq-obs').value.trim(), unid = $('eq-unidade').value,
         funcoes = [...document.querySelectorAll('[name="eq-funcao"]:checked')].map(e=>e.value),
         funcao = funcoes[0] || '', acesso = $('eq-acesso').value;
   if(!nome){ $('eq-nome').focus(); return; }
   if(!email.includes('@')){ $('eq-email').focus(); return; }
+  const digitosTelefone=telefone.replace(/\D/g,'');
+  if(telefone&&(digitosTelefone.length<10||digitosTelefone.length>13)){alert('Informe um telefone com DDD válido.');$('eq-telefone').focus();return;}
   const unidId = unid === 'Todas' ? null : ((LOCAIS.find(l => l.curto === unid) || {}).id || null);
   const funcaoIds = funcoes.map(nome=>(FUNCOES.find(f=>f.nome===nome)||{}).id).filter(Boolean);
   const temAcesso = acesso !== 'nao';
@@ -934,18 +936,23 @@ salvarPapel = async function(uid){
   const idAlvo=u?.id||uid||crypto.randomUUID();
   if(fotoEquipeNova){fotoPath=`${CONEXAO.orgId}/${idAlvo}/perfil-${Date.now()}.webp`;const up=await sbc.storage.from('fotos-equipe').upload(fotoPath,blobDeDataUrl(fotoEquipeNova),{contentType:'image/webp'});if(up.error){alert(up.error.message);return;}const sg=await sbc.storage.from('fotos-equipe').createSignedUrl(fotoPath,3600);fotoUrl=sg.data?.signedUrl||fotoEquipeNova;}
   if(u){
-    const {error}=await sbc.from('equipe').update({ nome, email, papel:P_TELA2DB[papel],
+    if(email!==String(u.email||'').trim().toLowerCase()){
+      if(!confirm(`Alterar o e-mail de acesso de ${u.email} para ${email}? A ficha e a conta de login serão sincronizadas juntas.`))return;
+      const {data:sincronizacao,error:erroSincronizacao}=await sbc.functions.invoke('atualizar-email-equipe',{body:{equipe_id:idAlvo,email_novo:email}});
+      if(erroSincronizacao||sincronizacao?.error){console.error('[banco] sincronizar e-mail',erroSincronizacao||sincronizacao?.error);alert(sincronizacao?.error||'Não foi possível sincronizar o e-mail. O endereço anterior foi preservado.');return;}
+    }
+    const {error}=await sbc.from('equipe').update({ nome, telefone:telefone||null, papel:P_TELA2DB[papel],
       observacao:obs||null, unidade_id:unidId, tem_acesso:temAcesso, nascimento,
       foto_url:fotoPath, ativo:true, desligado_em:null, ...(temAcesso?{}:{auth_id:null}) })
       .eq('id', idAlvo).eq('instituicao_id', CONEXAO.orgId);
     if(error){console.error('[banco] equipe',error);alert('Não foi possível salvar o acesso. Tente novamente.');return;}
     const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:idAlvo,p_funcoes:funcaoIds});
     if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('Os dados foram salvos, mas não foi possível atualizar as funções.');return;}
-    Object.assign(u, { nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid,
+    Object.assign(u, { nome, email, telefone, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid,
       foto:fotoUrl,fotoPath,status:'ativo' });
   } else {
     const id = idAlvo;
-    const {error}=await sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email,
+    const {error}=await sbc.from('equipe').insert({ id, instituicao_id:CONEXAO.orgId, nome, email, telefone:telefone||null,
       papel:P_TELA2DB[papel], observacao:obs||null, unidade_id:unidId, nascimento,
       tem_acesso:temAcesso,foto_url:fotoPath });
     if(error){
@@ -957,7 +964,7 @@ salvarPapel = async function(uid){
     }
     const {error:erroFuncoes}=await sbc.rpc('definir_funcoes_equipe',{p_equipe:id,p_funcoes:funcaoIds});
     if(erroFuncoes){console.error('[banco] funções da equipe',erroFuncoes);alert('A pessoa foi adicionada, mas não foi possível salvar as funções.');return;}
-    EQUIPE.push({ id, nome, email, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
+    EQUIPE.push({ id, nome, email, telefone, nascimento, papel, funcao, funcoes, acesso, obs, unidade:unid, status:'ativo', desde: iso(new Date()),foto:fotoUrl,fotoPath });
   }
   let acessoMsg = temAcesso ? 'Preparando o convite…' : 'Cadastro salvo sem acesso ao sistema.';
   if(temAcesso){
